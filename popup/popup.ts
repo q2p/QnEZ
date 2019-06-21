@@ -1,10 +1,11 @@
 const applyToLeft = document.getElementById("left");
 const applyToRight = document.getElementById("right");
 const applyToLeftAndRight = document.getElementById("left_and_right");
+const applyToSelected = document.getElementById("selected");
 
 interface ActionHolder {
 	element:HTMLElement,
-	action:(tabObjects:object[], tabIds:number[], left:boolean, right:boolean, activeIdx:number)=>void,
+	action:(tabObjects:object[], tabIds:number[])=>void,
 	actionRequiresBookmarks:boolean,
 	actionRequiresTabObjects:boolean,
 	actionRequiresTabIds:boolean
@@ -35,7 +36,7 @@ const actions:ActionHolder[] = [
 		element: document.getElementById("action_split_window"),
 		action: splitWindow,
 		actionRequiresBookmarks: false,
-		actionRequiresTabObjects: true,
+		actionRequiresTabObjects: false,
 		actionRequiresTabIds: true
 	}
 ];
@@ -56,7 +57,7 @@ bookmarksReset.addEventListener("click", resetBookmarkContainer, false);
 
 function execOnLR(left:boolean, right:boolean):void {
 	chrome.tabs.query({ currentWindow: true, active: true }, function (tabs) {
-		if(tabs.length == 0)
+		if(tabs.length === 0)
 			return;
 		
 		let activeIdx = tabs[0].index;
@@ -80,19 +81,39 @@ function execOnLR(left:boolean, right:boolean):void {
 					if(((left && tab.index < activeIdx) || (right && tab.index > activeIdx)))
 						filteredTabIds.push(tab.id);
 			}
-			actions[currentAction].action(filteredTabs, filteredTabIds, left, right, activeIdx);
+			actions[currentAction].action(filteredTabs, filteredTabIds);
 		});
+	});
+}
+
+function execOnSelected():void {
+	chrome.tabs.query({ currentWindow: true, highlighted: true }, function (tabs) {
+		if(tabs.length === 0)
+			return;
+			
+		let tabIds:number[] = [];
+		if(actions[currentAction].actionRequiresTabIds) {
+			for(let tab of tabs)
+			tabIds.push(tab.id);
+		}
+
+		if(!actions[currentAction].actionRequiresTabObjects)
+			tabs.length = 0;
+			
+		actions[currentAction].action(tabs, tabIds);
 	});
 }
 
 applyToLeft.addEventListener("click", () => execOnLR(true, false), false);
 applyToRight.addEventListener("click", () => execOnLR(false, true), false);
 applyToLeftAndRight.addEventListener("click", () => execOnLR(true, true), false);
+applyToSelected.addEventListener("click", () => execOnSelected(), false);
 
 function setApplyToButtonsEnabled(enabled:boolean) {
 	setElementEnabled(applyToLeft, enabled);
 	setElementEnabled(applyToRight, enabled);
 	setElementEnabled(applyToLeftAndRight, enabled);
+	setElementEnabled(applyToSelected, enabled);
 }
 
 setApplyToButtonsEnabled(false);
@@ -107,7 +128,7 @@ function splitWindow(tabObjects:any[], tabIds:number[]) {
 
 function discardTabs(tabObjects:any[], tabIds:number[]) {
 	for(let tabId of tabIds)
-			chrome.tabs.discard(tabId);
+		chrome.tabs.discard(tabId);
 }
 
 function bookmarkTabs(tabObjects:any[], tabIds:number[]) {
@@ -130,6 +151,7 @@ function pickAction(i:number, saveAction:boolean) {
 }
 
 function resetBookmarkContainer() {
+	setBookmarkContainerInputEnabled(false);
 	bookmarksContainerId = null;
 	bookmarksFolderInput.value = "";
 	localStorage.removeItem("bm_container");
@@ -152,7 +174,7 @@ function setBookmarkContainer() {
 		} else {
 			showError(
 				results.length === 0 ?
-				"Error: Can\"t find matching title" :
+				"Error: Can't find matching title" :
 				"Error: Multiple bookmark entries match this title"
 			);
 			setBookmarkContainerInputEnabled(true);
@@ -201,3 +223,5 @@ if(bookmarksContainerId !== null) {
 			pickAction(lastAction, false);
 	}
 }
+
+showError("      Error:   Multiplebookmark ");

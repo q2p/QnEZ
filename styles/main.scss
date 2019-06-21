@@ -48,6 +48,10 @@ $languagueContainerPadding: 20px;
 	}
 	outline: none;
 	-webkit-user-drag: none;
+	// word-break: break-word; // Same as overflow-wrap but aware about chineese chars. I do not use chineese chars, so overflow-wrap is sufficent.
+	overflow-wrap: break-word;
+	hyphens: none;
+	// white-space: pre-wrap; // Breaks the layout, but potentially useful somewhere...
 }
 
 html {
@@ -61,25 +65,31 @@ body {
 }
 
 #error_message {
-	color: #e44;
+	color: #e55;
+	background-color: #fee;
+	border: solid 1px #e55;
 	padding-top: 4px;
 	padding-bottom: 4px;
 	padding-left: 4px;
-	padding-right: 4px+16px;
+	padding-right: 4px+14px+6px;
 }
 
 #dismiss_error {
 	text-align: center;
 	position: absolute;
-	top: 0;
-	right: 0;
-	width: 20px;
-	height: 20px;
+	top: 6px;
+	right: 6px;
+	width: 14px;
+	height: 14px;
+	font-size: 12px;
+	line-height: 14px;
 	color: #fff;
-	background-color: #e44;
+	border-radius: 100%;
+	background-color: #f77;
 	&:hover {
-		background-color: #f22;
+		background-color: #e55;
 	}
+	cursor: pointer;
 }
 
 .button, .radio {

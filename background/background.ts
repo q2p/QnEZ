@@ -42,18 +42,18 @@ chrome.commands.onCommand.addListener((command) => {
                   chrome.bookmarks.create({ parentId: subTree[0].id, title: tab.title, url: tab.url });
                 } else {
                   failedCommand = true;
-                  alert('Error: Failed to create bookmark, target folder is invalid or absent.');
+                  alert('QnEZ error: Failed to create bookmark, target folder is invalid or absent.');
                 }
               });
             } else {
               failedCommand = true;
-              alert('Error: Failed to create bookmark, target folder is invalid or absent.');
+              alert('QnEZ error: Failed to create bookmark, target folder is invalid or absent.');
             }
             if(command === 'bookmark_and_close_current_tab' && !failedCommand)
               chrome.tabs.remove(tab.id);
           }
         } catch(e) {
-          alert('Error: Failed to complete the operation, something went wrong!');
+          alert('QnEZ error: Failed to complete the operation, something went wrong!');
         }
       });
       break;
@@ -67,7 +67,7 @@ chrome.contextMenus.onClicked.addListener((info:any) => {
   const target = info.srcUrl || info.linkUrl || info.pageUrl; 
   
   if(!target) {
-    alert('Can\'t get the url to save');
+    alert('QnEZ error: Can\'t get the url to save');
     return;
   }
   
@@ -77,6 +77,6 @@ chrome.contextMenus.onClicked.addListener((info:any) => {
 		saveAs: false,
   }, (downloadId:number) => {
 		if(downloadId === undefined)
-			alert('Failed to begin download:\n'+chrome.runtime.lastError);
+			alert('QnEZ error: Failed to begin download:\n'+chrome.runtime.lastError);
 	});
 });
