@@ -223,5 +223,3 @@ if(bookmarksContainerId !== null) {
 			pickAction(lastAction, false);
 	}
 }
-
-showError("      Error:   Multiplebookmark ");
