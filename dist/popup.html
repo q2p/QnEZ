@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta charset="UTF-8">
+		<title> QnEZ </title>
+		<meta name="referrer" content="no-referrer">
+		<link rel="stylesheet" type="text/css" href="styles.css">
+	</head>
+	<body>
+		<div id="error_message" style="display:none"></div>
+		<div id="dismiss_error" style="display:none">X</div>
+		<div class="button" id="discard_all_tabs"> Suspend all tabs </div>
+		<div class="row">
+			<div class="no_grow_shrink pad"> Bookmarks folder: </div>
+			<input id="bookmarks_folder" type="text" class="grow pad_r" disabled=""></input>
+			<div id="bookmarks_set" class="button no_grow_shrink disabled"> Set </div>
+			<div id="bookmarks_reset" class="button no_grow_shrink disabled" style="display:none"> Reset </div>
+		</div>
+		<div class="row">
+			<div id="action_bookmark" class="radio grow"> Bookmark </div>
+			<div id="action_bookmark_and_close" class="radio grow"> Bookmark and close </div>
+			<div id="action_discard" class="radio grow"> Suspend </div>
+			<div id="action_split_window" class="radio grow"> Split window </div>
+		</div>
+		<div class="row">
+			<div class="button grow" id="left"> Left </div>
+			<div class="button grow" id="right"> Right </div>
+			<div class="button grow" id="left_and_right"> Left and right </div>
+			<div class="button grow" id="sel"> Select </div>
+		</div>
+	</body>
+	<script type="text/javascript" src="popup.js"></script>
+</html>

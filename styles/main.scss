@@ -1,0 +1,149 @@
+@charset "UTF-8";
+
+@import url('https://fonts.googleapis.com/css?family=Noto+Sans');
+
+$regularFont: 'Noto Sans', sans-serif, Arial;
+
+$fontSize: 12px;
+
+$bodyWidth: 6*64px;
+
+$activeColor: #a0f;
+
+$textColor: #0f0f0f;
+$outlineColor: #0f0f13;
+$backgroundColor: #fff;
+$lighterBackground: #3f3f43;
+$checkboxBackground: #4f4f53;
+$selectionColor: #5f5f63;
+$hintColor: #8f8f93;
+$dangerColor: #f14a48; // TODO: выбрать
+$dangerColor: #ef4f4f; // TODO: выбрать
+
+$tabsMargin: 4px;
+$tabsTextPadding: 6px;
+
+$scrollbarWidth: 8px;
+
+$titleHeight: 28px;
+$titlePadding: 4px;
+
+$dragButtonDiameter: 6px;
+
+$flagHeight: 60px;
+$flagWidth: 90px;
+$languagueNameLeftMargin: 10px;
+$languagueContainerWidth: 220px;
+$languagueContainerPadding: 20px;
+
+* {
+	color: $textColor;
+	padding: 0;
+	margin: 0;
+	border: none;
+	font: {
+		family: $regularFont;
+		weight: normal;
+		size: $fontSize;
+	}
+	outline: none;
+	-webkit-user-drag: none;
+}
+
+html {
+	background-color: $backgroundColor;
+	user-select: none;
+	width: $bodyWidth;
+}
+body {
+	width: 100%;
+	position: relative;
+}
+
+#error_message {
+	color: #e44;
+	padding-top: 4px;
+	padding-bottom: 4px;
+	padding-left: 4px;
+	padding-right: 4px+16px;
+}
+
+#dismiss_error {
+	text-align: center;
+	position: absolute;
+	top: 0;
+	right: 0;
+	width: 20px;
+	height: 20px;
+	color: #fff;
+	background-color: #e44;
+	&:hover {
+		background-color: #f22;
+	}
+}
+
+.button, .radio {
+	text-align: center;
+	cursor: pointer;
+	padding: 4px;
+	margin: 4px;
+	border-radius: 2px;
+	background-color: #0faaee;
+	color: #0f0f0f;
+
+	&:hover {
+		background-color: #28bcfc;
+	}
+
+	&.disabled {
+		pointer-events: none;
+		background-color: #93a7af !important;
+	}
+}
+
+.pad {
+	padding: 4px;
+	margin: 4px;
+}
+
+.pad_r {
+	margin-right: 4px;
+}
+
+.radio.selected {
+	pointer-events: none;
+	background-color: #0083bb;
+}
+
+.row {
+	display: flex;
+	flex-direction: row;
+	box-sizing: border-box;
+	justify-content: center;
+	align-items: center;
+	align-content: center;
+}
+.grow {
+	flex-grow: 1;
+	flex-shrink: 0;
+}
+.no_grow_shrink {
+	flex-grow: 0;
+	flex-shrink: 0;
+}
+
+input {
+	min-width: 0px;
+  padding-left: 4px;
+  padding-right: 4px;
+	background-color: #eee;
+
+	&:disabled {
+		background-color: #ddd;
+		color: $textColor;
+		user-select: none;
+		&::selection {
+			background-color: transparent;
+		}
+	}
+}
