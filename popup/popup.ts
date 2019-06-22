@@ -56,6 +56,9 @@ bookmarksSet.addEventListener("click", setBookmarkContainer, false);
 bookmarksReset.addEventListener("click", resetBookmarkContainer, false);
 
 function execOnLR(left:boolean, right:boolean):void {
+	if(actions[currentAction].actionRequiresBookmarks && (bookmarksContainerId === null || disabledBookmarkActions))
+		return;
+
 	chrome.tabs.query({ currentWindow: true, active: true }, function (tabs) {
 		if(tabs.length === 0)
 			return;
@@ -87,6 +90,9 @@ function execOnLR(left:boolean, right:boolean):void {
 }
 
 function execOnSelected():void {
+	if(actions[currentAction].actionRequiresBookmarks && (bookmarksContainerId === null || disabledBookmarkActions))
+		return;
+		
 	chrome.tabs.query({ currentWindow: true, highlighted: true }, function (tabs) {
 		if(tabs.length === 0)
 			return;
@@ -143,12 +149,14 @@ function bookmarkAndCloseTabs(tabObjects:any[], tabIds:number[]) {
 }
 
 function pickAction(i:number, saveAction:boolean) {
-	actions[currentAction].element.classList.remove("selected");
-	actions[i].element.classList.add("selected");
-	currentAction = i;
-	setApplyToButtonsEnabled(!actions[currentAction].actionRequiresBookmarks || (bookmarksContainerId !== null && !disabledBookmarkActions));
-	if(saveAction)
-		localStorage.setItem("last_action", currentAction.toString());
+	if(currentAction !== i) {
+		actions[currentAction].element.classList.remove("selected");
+		actions[i].element.classList.add("selected");
+		currentAction = i;
+		setApplyToButtonsEnabled(!actions[currentAction].actionRequiresBookmarks || (bookmarksContainerId !== null && !disabledBookmarkActions));
+		if(saveAction)
+			localStorage.setItem("last_action", currentAction.toString());
+	}
 }
 
 function resetBookmarkContainer() {
@@ -166,16 +174,16 @@ function setBookmarkContainer() {
 			if(results[0].url === undefined) { // Is a folder
 				bookmarksContainerId = results[0].id;
 				bookmarksFolderInput.value = results[0].title;
-				localStorage.setItem("bm_container", bookmarksContainerId);
+				localStorage.setItem("bm_container", bookmarksContainerId.toString());
 				setBookmarkContainerInputEnabled(true);
 			} else {
-				showError("Error: Can't find a folder with matching title");
+				showError("Error: Can't find a folder with a matching title");
 				setBookmarkContainerInputEnabled(true);
 			}
 		} else {
 			showError(
 				results.length === 0 ?
-				"Error: Can't find matching title" :
+				"Error: Can't find a folder with a matching title" :
 				"Error: Multiple bookmark entries match this title"
 			);
 			setBookmarkContainerInputEnabled(true);
@@ -197,21 +205,6 @@ function setBookmarkContainerInputEnabled(enabled:boolean) {
 	setApplyToButtonsEnabled(!actions[currentAction].actionRequiresBookmarks || (enabled && bookmarksContainerId !== null));
 }
 
-setBookmarkContainerInputEnabled(false);
-
-bookmarksContainerId = localStorage.getItem("bm_container");
-if(bookmarksContainerId !== null) {
-	chrome.bookmarks.get(bookmarksContainerId, (subTree:any[]) => {
-		if(subTree.length === 1 && subTree[0].url === undefined) {
-			bookmarksContainerId = subTree[0].id;
-			bookmarksFolderInput.value = subTree[0].title;
-		}
-		setBookmarkContainerInputEnabled(true);
-	});
-} else {
-	setBookmarkContainerInputEnabled(true);
-}
-
 function discardAllTabs():void {
 	chrome.tabs.query({ active: false }, function (tabs) {
 		discardTabs(tabs, []);
@@ -219,7 +212,26 @@ function discardAllTabs():void {
 }
 document.getElementById('discard_all_tabs').addEventListener('click', discardAllTabs, false);
 
+setBookmarkContainerInputEnabled(false);
+
 {
+	let bmContainer = localStorage.getItem("bm_container");
+	if(bmContainer !== null) {
+		try {
+			chrome.bookmarks.get(bookmarksContainerId+1, (subTree:any[]) => {
+				if(subTree !== undefined && subTree.length === 1 && subTree[0].url === undefined) {
+					bookmarksContainerId = subTree[0].id;
+					bookmarksFolderInput.value = subTree[0].title;
+				}
+				setBookmarkContainerInputEnabled(true);
+			});
+		} catch {
+			setBookmarkContainerInputEnabled(true);
+		}
+	} else {
+		setBookmarkContainerInputEnabled(true);
+	}
+
 	let lastAction:any = localStorage.getItem("last_action");
 	if(lastAction === null) {
 		pickAction(1, true);
