@@ -218,7 +218,7 @@ setBookmarkContainerInputEnabled(false);
 	let bmContainer = localStorage.getItem("bm_container");
 	if(bmContainer !== null) {
 		try {
-			chrome.bookmarks.get(bookmarksContainerId+1, (subTree:any[]) => {
+			chrome.bookmarks.get(bookmarksContainerId, (subTree:any[]) => {
 				if(subTree !== undefined && subTree.length === 1 && subTree[0].url === undefined) {
 					bookmarksContainerId = subTree[0].id;
 					bookmarksFolderInput.value = subTree[0].title;
