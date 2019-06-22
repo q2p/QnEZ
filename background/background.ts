@@ -1,3 +1,5 @@
+const isFF = typeof(browser) !== 'undefined';
+
 chrome.runtime.onInstalled.addListener(function() {
   chrome.contextMenus.removeAll(() => {
     chrome.contextMenus.create(
@@ -79,4 +81,15 @@ chrome.contextMenus.onClicked.addListener((info:any) => {
 		if(downloadId === undefined)
 			alert('QnEZ error: Failed to begin download:\n'+chrome.runtime.lastError);
 	});
+});
+
+chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+	if(request.action === "split_window") {
+		let options:any = { incognito: request.incognito, type: "normal" };
+		if(!isFF)
+			options.focused = false; // TODO: 'focused' is not implemented in FF
+		chrome.windows.create(options, (newWindow:any) => {
+			chrome.tabs.move(request.tabIds, { windowId: newWindow.id, index: -1 });
+		});
+	}
 });

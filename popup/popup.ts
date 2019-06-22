@@ -36,7 +36,7 @@ const actions:ActionHolder[] = [
 		element: document.getElementById("action_split_window"),
 		action: splitWindow,
 		actionRequiresBookmarks: false,
-		actionRequiresTabObjects: false,
+		actionRequiresTabObjects: true,
 		actionRequiresTabIds: true
 	}
 ];
@@ -125,11 +125,11 @@ function setApplyToButtonsEnabled(enabled:boolean) {
 setApplyToButtonsEnabled(false);
 
 function splitWindow(tabObjects:any[], tabIds:number[]) {
-	chrome.windows.getCurrent({ populate: false, windowTypes: [ "normal" ] }, (oldWindow:any) => {
-		chrome.windows.create({focused: false, incognito: oldWindow.incognito, type: "normal" }, (newWindow:any) => {
-			chrome.tabs.move(tabIds, { windowId: newWindow.id, index: -1 });
-		});
-	});
+	chrome.runtime.sendMessage({
+		action: "split_window",
+		incognito: tabObjects[0].incognito,
+		tabIds: tabIds
+	}, ()=>{});
 }
 
 function discardTabs(tabObjects:any[], tabIds:number[]) {

@@ -1,3 +1,5 @@
+declare var browser:any;
+
 declare var chrome: {
 	readonly contextMenus:any;
 	readonly windows:any;
