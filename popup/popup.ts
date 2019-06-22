@@ -29,8 +29,8 @@ const actions:ActionHolder[] = [
 		element: document.getElementById("action_discard"),
 		action: discardTabs,
 		actionRequiresBookmarks: false,
-		actionRequiresTabObjects: false,
-		actionRequiresTabIds: true
+		actionRequiresTabObjects: true,
+		actionRequiresTabIds: false
 	},
 	{
 		element: document.getElementById("action_split_window"),
@@ -127,8 +127,9 @@ function splitWindow(tabObjects:any[], tabIds:number[]) {
 }
 
 function discardTabs(tabObjects:any[], tabIds:number[]) {
-	for(let tabId of tabIds)
-		chrome.tabs.discard(tabId);
+	for(let tab of tabObjects)
+		if(!tab.discarded)
+			chrome.tabs.discard(tab.id);
 }
 
 function bookmarkTabs(tabObjects:any[], tabIds:number[]) {
@@ -210,6 +211,13 @@ if(bookmarksContainerId !== null) {
 } else {
 	setBookmarkContainerInputEnabled(true);
 }
+
+function discardAllTabs():void {
+	chrome.tabs.query({ active: false }, function (tabs) {
+		discardTabs(tabs, []);
+	});
+}
+document.getElementById('discard_all_tabs').addEventListener('click', discardAllTabs, false);
 
 {
 	let lastAction:any = localStorage.getItem("last_action");

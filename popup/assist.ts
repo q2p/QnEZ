@@ -8,7 +8,3 @@ function setElementEnabled(button:HTMLElement, enabled:boolean) {
 function setVisibility(element:HTMLElement, visible:boolean) {
 	element.style.display = visible ? 'block' : 'none';
 }
-
-function variableIs(variable:any, type:string) {
-	return variable !== undefined && variable !== null && typeof(variable) === type;
-}

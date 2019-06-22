@@ -19,7 +19,6 @@
 		"../ts/chromeApi.ts",
 		"./assist.ts",
 		"./errorMessage.ts",
-		"./discardAllTabs.ts",
 		"./popup.ts"
 	]
 }
