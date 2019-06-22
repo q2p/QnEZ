@@ -1,15 +1,19 @@
 {
 	"name": "QnEZ",
+	"default_locale": "en",
 	"description": "Quick bookmark creation and tab discarding. One click downloads n stuff. IDK.",
-	"version": "0.0.4",
+	"version": "0.0.5",
 	"manifest_version":	2,
 	"permissions": [ "tabs", "bookmarks", "contextMenus", "storage", "downloads" ],
+	"offline_enabled": true,
 	"icons": {
 		 "16": "icon16.png",
 		 "32": "icon32.png",
 		 "48": "icon48.png",
 		"128": "icon128.png"
 	},
+	"homepage_url": "https://github.com/q2p/QnEZ",
+	"incognito": "spanning",
 	"minimum_chrome_version": "17",
 	"browser_action": {
 		"default_popup": "popup.html"
