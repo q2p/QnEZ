@@ -59,7 +59,7 @@ function execOnLR(left:boolean, right:boolean):void {
 	if(actions[currentAction].actionRequiresBookmarks && (bookmarksContainerId === null || disabledBookmarkActions))
 		return;
 
-	chrome.tabs.query({ currentWindow: true, active: true }, function (tabs) {
+	chrome.tabs.query({ currentWindow: true, active: true }, (tabs) => {
 		if(tabs.length === 0)
 			return;
 		
@@ -92,8 +92,8 @@ function execOnLR(left:boolean, right:boolean):void {
 function execOnSelected():void {
 	if(actions[currentAction].actionRequiresBookmarks && (bookmarksContainerId === null || disabledBookmarkActions))
 		return;
-		
-	chrome.tabs.query({ currentWindow: true, highlighted: true }, function (tabs) {
+	
+	chrome.tabs.query({ currentWindow: true, highlighted: true }, (tabs) => {
 		if(tabs.length === 0)
 			return;
 			
@@ -206,7 +206,7 @@ function setBookmarkContainerInputEnabled(enabled:boolean) {
 }
 
 function discardAllTabs():void {
-	chrome.tabs.query({ active: false }, function (tabs) {
+	chrome.tabs.query({ active: false }, (tabs) => {
 		discardTabs(tabs, []);
 	});
 }

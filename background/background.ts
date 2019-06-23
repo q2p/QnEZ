@@ -1,19 +1,19 @@
-const isFF = typeof(browser) !== 'undefined';
+const isFF = typeof(browser) !== "undefined";
 
-chrome.runtime.onInstalled.addListener(function() {
+chrome.runtime.onInstalled.addListener(() => {
 	chrome.contextMenus.removeAll(() => {
 		chrome.contextMenus.create(
 			{
-				id: 'save_it',
-				title: 'Save It',
-				contexts: [ 'all' ]
+				id: "save_it",
+				title: "Save It",
+				contexts: [ "all" ]
 			}
 		);
 	});
 });
 
 chrome.runtime.onStartup.addListener(() => {
-	chrome.tabs.query({}, function (tabs) {
+	chrome.tabs.query({}, (tabs) => {
 		for(let tab of tabs)
 			if(tab !== undefined && !tab.discarded)
 				chrome.tabs.discard(tab.id);
@@ -63,23 +63,23 @@ chrome.commands.onCommand.addListener((command) => {
 });
 
 chrome.contextMenus.onClicked.addListener((info:any) => {
-	if(info.menuItemId !== 'save_it')
+	if(info.menuItemId !== "save_it")
 		return;
 	
 	const target = info.srcUrl || info.linkUrl || info.pageUrl; 
 	
 	if(!target) {
-		alert('QnEZ error: Can\'t get the url to save');
+		alert("QnEZ error: Can't get the url to save");
 		return;
 	}
 	
 	chrome.downloads.download({
 		url: target,
-		conflictAction: isFF ? 'uniquify' : 'prompt', // TODO: 'prompt' is not yet implemented in FF
+		conflictAction: isFF ? "uniquify" : "prompt", // TODO: "prompt" is not yet implemented in FF
 		saveAs: false,
 	}, (downloadId:number) => {
 		if(downloadId === undefined)
-			alert('QnEZ error: Failed to begin download:\n'+chrome.runtime.lastError);
+			alert("QnEZ error: Failed to begin download:\n"+chrome.runtime.lastError);
 	});
 });
 
@@ -87,7 +87,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 	if(request.action === "split_window") {
 		let options:any = { incognito: request.incognito, type: "normal" };
 		if(!isFF)
-			options.focused = false; // TODO: 'focused' is not implemented in FF
+			options.focused = false; // TODO: "focused" is not implemented in FF
 		chrome.windows.create(options, (newWindow:any) => {
 			chrome.tabs.move(request.tabIds, { windowId: newWindow.id, index: -1 });
 		});
