@@ -22,14 +22,14 @@
 		"persistent": false
 	},
 	"commands": {
-		"discard_current_tab": {
-			"description": "Suspend tab"
+		"discard_selected_tabs": {
+			"description": "Suspend selected tabs"
 		},
-		"bookmark_current_tab": {
-			"description": "Bookmark tab"
+		"bookmark_selected_tabs": {
+			"description": "Bookmark selected tabs"
 		},
-		"bookmark_and_close_current_tab": {
-			"description": "Bookmark and close tab"
+		"bookmark_and_close_selected_tabs": {
+			"description": "Bookmark and close selected tabs"
 		}
 	}
 }

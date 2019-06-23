@@ -22,44 +22,49 @@ chrome.runtime.onStartup.addListener(() => {
 
 let failedCommand:boolean = false;
 chrome.commands.onCommand.addListener((command) => {
-	failedCommand = false;
 	switch(command) {
-		case 'discard_current_tab':
-		case 'bookmark_current_tab':
-		case 'bookmark_and_close_current_tab':
-			chrome.tabs.query({ currentWindow: true, active: true }, (tabs) => {
-				if(tabs.length !== 1)
-					return;
-				
-				let tab = tabs[0];
-
-				try {
-					if(command === 'discard_current_tab') {
-						chrome.tabs.discard(tab.id);
-					} else { 
-						let containerId = localStorage.getItem("bm_container");
-						if(containerId !== null) {
-							chrome.bookmarks.get(containerId, (subTree:any[]) => {
-								if(subTree.length === 1 && subTree[0].url === undefined) {
-									chrome.bookmarks.create({ parentId: subTree[0].id, title: tab.title, url: tab.url });
-								} else {
-									failedCommand = true;
-									alert('QnEZ error: Failed to create bookmark, target folder is invalid or absent.');
-								}
-							});
-						} else {
-							failedCommand = true;
-							alert('QnEZ error: Failed to create bookmark, target folder is invalid or absent.');
-						}
-						if(command === 'bookmark_and_close_current_tab' && !failedCommand)
-							chrome.tabs.remove(tab.id);
-					}
-				} catch(e) {
-					alert('QnEZ error: Failed to complete the operation, something went wrong!');
-				}
-			});
+		case "discard_selected_tabs":
+		case "bookmark_selected_tabs":
+		case "bookmark_and_close_selected_tabs":
 			break;
+		default:
+			return;
 	}
+
+	chrome.tabs.query({ currentWindow: true, highlighted: true }, (tabs) => {
+		if(tabs.length === 0)
+			return;
+
+		try {
+			if(command === "discard_selected_tabs") {
+				for(let tab of tabs)
+					if(!tab.discarded)
+						chrome.tabs.discard(tab.id);
+				return;
+			}
+			
+			let containerId = localStorage.getItem("bm_container");
+			if(containerId !== null) {
+				chrome.bookmarks.get(containerId, (subTree:any[]) => {
+					if(subTree !== undefined && subTree.length === 1 && subTree[0].url === undefined) {
+						containerId = subTree[0].id;
+
+						for(let tab of tabs)
+							chrome.bookmarks.create({ parentId: containerId, title: tab.title, url: tab.url });
+
+						if(command === "bookmark_and_close_selected_tabs")
+							chrome.tabs.remove(tabs.map(tab => tab.id));
+					} else {
+						alert("QnEZ error: Failed to create bookmark, target folder is invalid or absent.");
+					}
+				});
+			} else {
+				alert("QnEZ error: Failed to create bookmark, target folder is invalid or absent.");
+			}
+		} catch(e) {
+			alert("QnEZ error: Failed to complete the operation, something went wrong!");
+		}
+	});
 });
 
 chrome.contextMenus.onClicked.addListener((info:any) => {
