@@ -1,5 +1,14 @@
 const isFF = typeof(browser) !== "undefined";
 
+// Discard tabs
+chrome.runtime.onStartup.addListener(() => {
+	chrome.tabs.query({}, (tabs) => {
+		for(let tab of tabs)
+			if(tab !== undefined && !tab.discarded)
+				chrome.tabs.discard(tab.id);
+	});
+});
+
 // Create context menu
 chrome.runtime.onInstalled.addListener(() => {
 	chrome.contextMenus.removeAll(() => {
@@ -13,14 +22,7 @@ chrome.runtime.onInstalled.addListener(() => {
 	});
 });
 
-chrome.runtime.onStartup.addListener(() => {
-	chrome.tabs.query({}, (tabs) => {
-		for(let tab of tabs)
-			if(tab !== undefined && !tab.discarded)
-				chrome.tabs.discard(tab.id);
-	});
-});
-
+// Receive commands
 let failedCommand:boolean = false;
 chrome.commands.onCommand.addListener((command) => {
 	switch(command) {
@@ -68,6 +70,7 @@ chrome.commands.onCommand.addListener((command) => {
 	});
 });
 
+// Context menu on click
 chrome.contextMenus.onClicked.addListener((info:any) => {
 	if(info.menuItemId !== "save_it")
 		return;
@@ -89,6 +92,7 @@ chrome.contextMenus.onClicked.addListener((info:any) => {
 	});
 });
 
+// Split window message receiver
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 	if(request.action === "split_window") {
 		let options:any = { incognito: request.incognito, type: "normal" };
