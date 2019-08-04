@@ -1,5 +1,6 @@
 const isFF = typeof(browser) !== "undefined";
 
+// Create context menu
 chrome.runtime.onInstalled.addListener(() => {
 	chrome.contextMenus.removeAll(() => {
 		chrome.contextMenus.create(
