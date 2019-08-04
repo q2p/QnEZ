@@ -8,33 +8,10 @@ $fontSize: 12px;
 
 $bodyWidth: 6*64px;
 
-$activeColor: #a0f;
-
 $textColor: #0f0f0f;
-$outlineColor: #0f0f13;
 $backgroundColor: #fff;
-$lighterBackground: #3f3f43;
-$checkboxBackground: #4f4f53;
-$selectionColor: #5f5f63;
-$hintColor: #8f8f93;
 $dangerColor: #f14a48; // TODO: выбрать
 $dangerColor: #ef4f4f; // TODO: выбрать
-
-$tabsMargin: 4px;
-$tabsTextPadding: 6px;
-
-$scrollbarWidth: 8px;
-
-$titleHeight: 28px;
-$titlePadding: 4px;
-
-$dragButtonDiameter: 6px;
-
-$flagHeight: 60px;
-$flagWidth: 90px;
-$languagueNameLeftMargin: 10px;
-$languagueContainerWidth: 220px;
-$languagueContainerPadding: 20px;
 
 * {
 	color: $textColor;
@@ -81,7 +58,7 @@ body {
 	right: 6px;
 	width: 14px;
 	height: 14px;
-	font-size: 12px;
+	font-size: $fontSize;
 	line-height: 14px;
 	color: #fff;
 	border-radius: 100%;
@@ -106,8 +83,9 @@ body {
 	}
 
 	&.disabled {
+		color: #3f3f3f !important;
 		pointer-events: none;
-		background-color: #93a7af !important;
+		background-color: #bfbfbf !important;
 	}
 }
 
