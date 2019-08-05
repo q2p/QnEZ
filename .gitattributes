@@ -1,0 +1,13 @@
+* text=auto
+
+LICENSE text
+*.gitattributes text
+*.txt text
+*.json text
+*.html text
+*.ts text
+*.js text
+*.scss text
+*.css text
+
+*.png binary
