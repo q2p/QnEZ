@@ -55,33 +55,38 @@ const bookmarksReset:HTMLElement = document.getElementById("bookmarks_reset");
 bookmarksSet.addEventListener("click", setBookmarkContainer, false);
 bookmarksReset.addEventListener("click", resetBookmarkContainer, false);
 
+function cantExec() {
+	return actions[currentAction].actionRequiresBookmarks && (bookmarksContainerId === null || disabledBookmarkActions);
+}
+
 function execOnLR(left:boolean, right:boolean):void {
-	if(actions[currentAction].actionRequiresBookmarks && (bookmarksContainerId === null || disabledBookmarkActions))
+	if(cantExec())
 		return;
 
-	chrome.tabs.query({ currentWindow: true, active: true }, (tabs) => {
+	chrome.tabs.query({ currentWindow: true,  highlighted: true }, (tabs) => {
 		if(tabs.length === 0)
 			return;
 		
-		let activeIdx = tabs[0].index;
+		let slIdx = tabs[0].index;
+		let srIdx = tabs[tabs.length-1].index;
 
 		chrome.tabs.query({ currentWindow: true }, (tabs) => {
 			let filteredTabs:object[] = [];
 			let filteredTabIds:number[] = [];
 			if(actions[currentAction].actionRequiresTabObjects && actions[currentAction].actionRequiresTabIds) {
 				for(let tab of tabs) {
-					if(((left && tab.index < activeIdx) || (right && tab.index > activeIdx))) {
+					if(((left && tab.index < slIdx) || (right && tab.index > srIdx))) {
 						filteredTabs.push(tab);
 						filteredTabIds.push(tab.id);
 					}
 				}
 			} else if(actions[currentAction].actionRequiresTabObjects) {
 				for(let tab of tabs)
-					if(((left && tab.index < activeIdx) || (right && tab.index > activeIdx)))
+					if(((left && tab.index < slIdx) || (right && tab.index > srIdx)))
 						filteredTabs.push(tab);
 			} else {
 				for(let tab of tabs)
-					if(((left && tab.index < activeIdx) || (right && tab.index > activeIdx)))
+					if(((left && tab.index < slIdx) || (right && tab.index > srIdx)))
 						filteredTabIds.push(tab.id);
 			}
 			actions[currentAction].action(filteredTabs, filteredTabIds);
@@ -90,7 +95,7 @@ function execOnLR(left:boolean, right:boolean):void {
 }
 
 function execOnSelected():void {
-	if(actions[currentAction].actionRequiresBookmarks && (bookmarksContainerId === null || disabledBookmarkActions))
+	if(cantExec())
 		return;
 	
 	chrome.tabs.query({ currentWindow: true, highlighted: true }, (tabs) => {
@@ -100,7 +105,7 @@ function execOnSelected():void {
 		let tabIds:number[] = [];
 		if(actions[currentAction].actionRequiresTabIds) {
 			for(let tab of tabs)
-			tabIds.push(tab.id);
+				tabIds.push(tab.id);
 		}
 
 		if(!actions[currentAction].actionRequiresTabObjects)

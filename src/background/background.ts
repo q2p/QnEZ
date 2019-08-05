@@ -1,16 +1,6 @@
 const isFF = typeof(browser) !== "undefined";
 
-// Discard tabs
-chrome.runtime.onStartup.addListener(() => {
-	chrome.tabs.query({}, (tabs) => {
-		for(let tab of tabs)
-			if(tab !== undefined && !tab.discarded)
-				chrome.tabs.discard(tab.id);
-	});
-});
-
-// Create context menu
-chrome.runtime.onInstalled.addListener(() => {
+function createContextMenu():void {
 	chrome.contextMenus.removeAll(() => {
 		chrome.contextMenus.create(
 			{
@@ -20,11 +10,32 @@ chrome.runtime.onInstalled.addListener(() => {
 			}
 		);
 	});
-});
+}
+
+// Context menu on click
+function contextMenuClick(info:any):void {
+	if(info.menuItemId !== "save_it")
+		return;
+	
+	const target = info.srcUrl || info.linkUrl || info.pageUrl; 
+	
+	if(!target) {
+		alert("QnEZ error: Can't get the url to save");
+		return;
+	}
+	
+	chrome.downloads.download({
+		url: target,
+		conflictAction: isFF ? "uniquify" : "prompt", // TODO: "prompt" is not yet implemented in FF
+		saveAs: false,
+	}, (downloadId:number) => {
+		if(downloadId === undefined)
+			alert("QnEZ error: Failed to begin download:\n"+chrome.runtime.lastError);
+	});
+}
 
 // Receive commands
-let failedCommand:boolean = false;
-chrome.commands.onCommand.addListener((command) => {
+function onCommand(command:string):void {
 	switch(command) {
 		case "discard_selected_tabs":
 		case "bookmark_selected_tabs":
@@ -68,32 +79,10 @@ chrome.commands.onCommand.addListener((command) => {
 			alert("QnEZ error: Failed to complete the operation, something went wrong!");
 		}
 	});
-});
-
-// Context menu on click
-chrome.contextMenus.onClicked.addListener((info:any) => {
-	if(info.menuItemId !== "save_it")
-		return;
-	
-	const target = info.srcUrl || info.linkUrl || info.pageUrl; 
-	
-	if(!target) {
-		alert("QnEZ error: Can't get the url to save");
-		return;
-	}
-	
-	chrome.downloads.download({
-		url: target,
-		conflictAction: isFF ? "uniquify" : "prompt", // TODO: "prompt" is not yet implemented in FF
-		saveAs: false,
-	}, (downloadId:number) => {
-		if(downloadId === undefined)
-			alert("QnEZ error: Failed to begin download:\n"+chrome.runtime.lastError);
-	});
-});
+}
 
 // Split window message receiver
-chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+function onMessage(request:any, sender:any, sendResponse:any):void {
 	if(request.action === "split_window") {
 		let options:any = { incognito: request.incognito, type: "normal" };
 		if(!isFF)
@@ -102,4 +91,26 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 			chrome.tabs.move(request.tabIds, { windowId: newWindow.id, index: -1 });
 		});
 	}
-});
+}
+
+if(!chrome.contextMenus.onClicked.hasListener(contextMenuClick)) {
+	// Discard tabs
+	chrome.runtime.onStartup.addListener(() => {
+		chrome.tabs.query({}, (tabs) => {
+			for(let tab of tabs)
+				if(tab !== undefined && !tab.discarded)
+					chrome.tabs.discard(tab.id);
+		});
+	});
+	// Create context menu
+	createContextMenu();
+	/*
+	if (chrome.runtime.onInstalled) {
+		chrome.runtime.onInstalled.addListener(() => {
+			createContextMenu();
+		});
+	}*/
+	chrome.contextMenus.onClicked.addListener(contextMenuClick);
+	chrome.commands.onCommand.addListener(onCommand);
+	chrome.runtime.onMessage.addListener(onMessage);
+}

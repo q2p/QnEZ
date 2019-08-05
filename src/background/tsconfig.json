@@ -1,0 +1,21 @@
+{
+	"compileOnSave": true,
+	"compilerOptions": {
+		"target": "es2017",
+		"module": "system",
+		"noImplicitThis": true,
+		"noImplicitAny": true,
+		"alwaysStrict": true,
+		"noImplicitReturns": true,
+		"noFallthroughCasesInSwitch": true,
+		"strictFunctionTypes": true,
+		"removeComments": true,
+		"preserveConstEnums": true,
+		"outFile": "../../dist/background.js",
+		"sourceMap": false
+	},
+	"files": [
+		"../chromeApi.ts",
+		"./background.ts"
+	]
+}
