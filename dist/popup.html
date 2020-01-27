@@ -7,26 +7,50 @@
 		<link rel="stylesheet" type="text/css" href="styles.css">
 	</head>
 	<body>
-		<div id="error_message" style="display:none"></div>
-		<div id="dismiss_error" style="display:none">&#10005;</div>
-		<div class="button" id="discard_all_tabs"> Suspend all tabs </div>
-		<div class="row">
-			<div class="no_grow_shrink pad"> Bookmarks folder: </div>
-			<input id="bookmarks_folder" type="text" class="grow pad_r" disabled="">
-			<div id="bookmarks_set" class="button no_grow_shrink disabled"> Set </div>
-			<div id="bookmarks_reset" class="button no_grow_shrink disabled" style="display:none"> Reset </div>
+		<div class="header shadow"> QnEZ by <a target="_blank" href="https://danbit.ru/">DanBit.ru</a> </div>
+		<div class="card shadow button" id="discard_all_tabs"> Suspend all tabs </div>
+		<div class="card shadow button row" id="bookmarks_open_button">
+			<div class="no_shrink"> Bookmarks folder: </div>
+			<div id="bookmarks_indicator" class="indicator"> Not set </div>
 		</div>
-		<div class="row">
-			<div id="action_bookmark" class="radio grow"> Bookmark </div>
-			<div id="action_bookmark_and_close" class="radio grow"> Bookmark and close </div>
-			<div id="action_discard" class="radio grow"> Suspend </div>
-			<div id="action_split_window" class="radio grow"> Split window </div>
+		<div class="card shadow">
+			<div class="title"> Actions: </div>
+			<div class="radio row" id="action_bookmark">
+				<div class="radio_circle"><div class="inner_circle"></div></div>
+				<div class="lable">Bookmark tabs</div>
+			</div>
+			<div class="radio row" id="action_bookmark_and_close">
+				<div class="radio_circle"><div class="inner_circle"></div></div>
+				<div class="lable">Bookmark and close tabs</div>
+			</div>
+			<div class="radio row" id="action_discard">
+				<div class="radio_circle"><div class="inner_circle"></div></div>
+				<div class="lable">Suspend tabs</div>
+			</div>
+			<div class="radio row" id="action_split_window">
+				<div class="radio_circle"><div class="inner_circle"></div></div>
+				<div class="lable">Split tabs to different windows</div>
+			</div>
 		</div>
-		<div class="row">
-			<div class="button grow" id="left"> Left </div>
-			<div class="button grow" id="right"> Right </div>
-			<div class="button grow" id="left_and_right"> Left and right </div>
-			<div class="button grow" id="selected"> Selectected </div>
+		<div class="card shadow">
+			<div class="title"> Execute actions on... </div>
+			<div class="button" id="left"> Tabs to the left </div>
+			<div class="button" id="right"> Tabs to the right </div>
+			<div class="button" id="left_and_right"> Tabs to the left and right </div>
+			<div class="button" id="selected"> Selectected tabs </div>
+		</div>
+		<div id="bookmarks_overlay" class="hidden">
+			<div id="bookmarks_window" class="card shadow">
+				<div class="title"> Bookmarks folder: </div>
+				<div id="input_container">
+					<input id="bookmarks_folder" type="text" disabled="" placeholder="...">
+					<div id="error_message"></div>
+				</div>
+				<div class="row">
+					<div id="bookmarks_set" class="button disabled grow"> Save </div>
+					<div id="bookmarks_cancel" class="button grow"> Cancel </div>
+				</div>
+			</div>
 		</div>
 		<script type="text/javascript" src="popup.js"></script>
 	</body>

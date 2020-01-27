@@ -26,7 +26,8 @@ function contextMenuClick(info:any):void {
 	
 	chrome.downloads.download({
 		url: target,
-		conflictAction: isFF ? "uniquify" : "prompt", // TODO: "prompt" is not yet implemented in FF
+		// TODO: "prompt" is not yet implemented in FF
+		conflictAction: isFF ? "uniquify" : "prompt",
 		saveAs: false,
 	}, (downloadId:number) => {
 		if(downloadId === undefined)
@@ -57,14 +58,14 @@ function onCommand(command:string):void {
 				return;
 			}
 			
-			let containerId = localStorage.getItem("bm_container");
-			if(containerId !== null) {
-				chrome.bookmarks.get(containerId, (subTree:any[]) => {
-					if(subTree !== undefined && subTree.length === 1 && subTree[0].url === undefined) {
-						containerId = subTree[0].id;
+			let container_id = localStorage.getItem("bm_container");
+			if(container_id !== null) {
+				chrome.bookmarks.get(container_id, (sub_tree:any[]) => {
+					if(sub_tree !== undefined && sub_tree.length === 1 && sub_tree[0].url === undefined) {
+						container_id = sub_tree[0].id;
 
 						for(let tab of tabs)
-							chrome.bookmarks.create({ parentId: containerId, title: tab.title, url: tab.url });
+							chrome.bookmarks.create({ parentId: container_id, title: tab.title, url: tab.url });
 
 						if(command === "bookmark_and_close_selected_tabs")
 							chrome.tabs.remove(tabs.map(tab => tab.id));
@@ -85,8 +86,12 @@ function onCommand(command:string):void {
 function onMessage(request:any, sender:any, sendResponse:any):void {
 	if(request.action === "split_window") {
 		let options:any = { incognito: request.incognito, type: "normal" };
-		if(!isFF)
-			options.focused = false; // TODO: "focused" is not implemented in FF
+
+		if(!isFF) {
+			// TODO: "focused" is not implemented in FF
+			options.focused = false;
+		}
+
 		chrome.windows.create(options, (newWindow:any) => {
 			chrome.tabs.move(request.tabIds, { windowId: newWindow.id, index: -1 });
 		});

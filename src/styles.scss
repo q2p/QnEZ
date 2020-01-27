@@ -1,134 +1,245 @@
 @charset "UTF-8";
 
-@import url('https://fonts.googleapis.com/css?family=Noto+Sans');
+// @import url('https://fonts.googleapis.com/css?family=Noto+Sans');
 
-$regularFont: 'Noto Sans', sans-serif, Arial;
+$font_family: 'Noto Sans', sans-serif, Arial;
 
-$fontSize: 12px;
+$font_size: 14px;
 
-$bodyWidth: 6*64px;
+$window_width: 5*64px;
+$overlay_width: 4*64px;
 
-$textColor: #0f0f0f;
-$backgroundColor: #fff;
-$dangerColor: #f14a48; // TODO: выбрать
-$dangerColor: #ef4f4f; // TODO: выбрать
+$text_color: #fff;
+$background_color: #191919;
+$hover_color: #137cbd;
+$card_color: #202123;
+$disabled_color: #5e5f61;
+$secondary_color: #707070;
+$overlay_color: rgba(0,0,0,0.8);
+$error_color: #f14a48; // TODO: выбрать
+$error_color: #ef4f4f; // TODO: выбрать
+$error_color: #e55;
 
 * {
-	color: $textColor;
+	color: $text_color;
 	padding: 0;
 	margin: 0;
 	border: none;
 	font: {
-		family: $regularFont;
-		weight: normal;
-		size: $fontSize;
+		family: $font_family;
+		weight: bold;
+		size: $font_size;
 	}
 	outline: none;
 	-webkit-user-drag: none;
 	// word-break: break-word; // Same as overflow-wrap but aware about chineese chars. I do not use chineese chars, so overflow-wrap is sufficent.
-	overflow-wrap: break-word;
+	// overflow-wrap: break-word;
 	hyphens: none;
 	// white-space: pre-wrap; // Breaks the layout, but potentially useful somewhere...
 }
 
 html {
-	background-color: $backgroundColor;
+	background-color: $background_color;
 	user-select: none;
-	width: $bodyWidth;
+	width: $window_width;
 }
 body {
-	width: $bodyWidth;
+	width: $window_width;
 	position: relative;
 }
+a {
+	text-decoration: none;
 
-#error_message {
-	color: #e55;
-	background-color: #fee;
-	border: solid 1px #e55;
-	padding-top: 4px;
-	padding-bottom: 4px;
-	padding-left: 4px;
-	padding-right: 4px+14px+6px;
-}
-
-#dismiss_error {
-	text-align: center;
-	position: absolute;
-	top: 6px;
-	right: 6px;
-	width: 14px;
-	height: 14px;
-	font-size: $fontSize;
-	line-height: 14px;
-	color: #fff;
-	border-radius: 100%;
-	background-color: #f77;
 	&:hover {
-		background-color: #e55;
+		text-decoration: underline solid;
+		color: $hover_color;
 	}
-	cursor: pointer;
 }
 
-.button, .radio {
+#bookmarks_overlay {
+	position: fixed;
+	left: 0px;
+	right: 0px;
+	top: 0px;
+	bottom: 0px;
+	background-color: $overlay_color;
+
+	display: flex;
+	justify-content: center;
+	justify-items: center;
+	align-content: center;
+	align-items: center;
+}
+
+.hidden {
+	display: none !important;
+}
+
+.shadow {
+	box-shadow: 0px 1px 2px -1px #000;
+}
+
+.no_shrink {
+	flex-shrink: 0;
+}
+
+.header {
+	background-color: $card_color;
 	text-align: center;
+	padding: 8px;
+}
+
+.card {
+	border-radius: 6px;
+	background-color: $card_color;
+	margin: 8px;
+	overflow: hidden;
+}
+
+.button {
 	cursor: pointer;
-	padding: 4px;
-	margin: 4px;
-	border-radius: 2px;
-	background-color: #0faaee;
-	color: #0f0f0f;
+	padding: 8px;
 
 	&:hover {
-		background-color: #28bcfc;
+		background-color: $hover_color;
+
+		.indicator {
+			color: $text_color;
+		}
 	}
 
 	&.disabled {
-		color: #3f3f3f !important;
+		color: $disabled_color !important;
 		pointer-events: none;
-		background-color: #bfbfbf !important;
 	}
 }
 
-.pad {
-	padding: 4px;
-	margin: 4px;
+.radio {
+	cursor: pointer;
+	padding: 8px;
+
+	&:hover {
+		background-color: $hover_color;
+		.radio_circle {
+			border-color: $text_color !important;
+		}
+		.inner_circle {
+			background-color: $text_color !important;
+		}
+	}
 }
 
-.pad_r {
-	margin-right: 4px;
+$diameter: 18px;
+$inner_diameter: 10px;
+$circle_border: 1px;
+
+.radio_circle {
+	box-sizing: border-box;
+	width:  $diameter;
+	height: $diameter;
+	border-width: 2px;
+	border-style: solid;
+	border-color: $secondary_color;
+	border-radius: 100%;
+
+	display: flex;
+	justify-content: center;
+	justify-items: center;
+	align-content: center;
+	align-items: center;
+}
+
+.inner_circle {
+	width:  0px;
+	height: 0px;
+	border-radius: 100%;
+	background-color: $secondary_color;
+	// transition-property: width height;
+	// transition: 0.2s ease;
+}
+
+.indicator {
+	color: $secondary_color;
+	padding-left: 8px;
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+
+.title {
+	color: $secondary_color;
+	padding: 8px;
+}
+
+.lable {
+	padding-left: 8px;
+	padding-right: 8px;
 }
 
 .radio.selected {
-	pointer-events: none;
-	background-color: #0083bb;
+	.radio_circle {
+		border-color: $hover_color;
+	}
+	.inner_circle{
+		width:  $inner_diameter;
+		height: $inner_diameter;
+		background-color: $hover_color;
+	}
 }
 
 .row {
 	display: flex;
 	flex-direction: row;
 	box-sizing: border-box;
-	justify-content: center;
+	justify-content: left;
 	align-items: center;
 	align-content: center;
 }
+
 .grow {
 	flex-grow: 1;
-	flex-shrink: 0;
+	text-align: center;
 }
-.no_grow_shrink {
-	flex-grow: 0;
-	flex-shrink: 0;
+
+#bookmarks_window {
+	width: $overlay_width;
+}
+
+#error_message {
+	display: none;
+
+	color: $error_color;
+}
+
+#input_container {
+	padding: 8px;
+
+	&.error {
+		input {
+			border-bottom-color: $error_color;
+		}
+		#error_message {
+			display: block;
+		}
+	}
 }
 
 input {
-	min-width: 0px;
+	display: block;
+	width: $overlay_width - 2 * 8px - 2 * 4px;
 	padding-left: 4px;
 	padding-right: 4px;
-	background-color: #eee;
+	margin-bottom: 4px;
+	background-color: transparent;
+	border-bottom: $secondary_color 2px solid;
+	color: $text_color;
+
+	&:focus {
+		border-color: $hover_color;
+	}
 
 	&:disabled {
-		background-color: #ddd;
-		color: $textColor;
+		color: $disabled_color !important;
+		border-color: $disabled_color !important;
 		user-select: none;
 		&::selection {
 			background-color: transparent;

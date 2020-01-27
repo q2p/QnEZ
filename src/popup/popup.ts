@@ -1,66 +1,71 @@
-const applyToLeft = document.getElementById("left");
-const applyToRight = document.getElementById("right");
-const applyToLeftAndRight = document.getElementById("left_and_right");
-const applyToSelected = document.getElementById("selected");
+const apply_to_left = document.getElementById("left");
+const apply_to_right = document.getElementById("right");
+const apply_to_left_and_right = document.getElementById("left_and_right");
+const apply_to_selected = document.getElementById("selected");
 
 interface ActionHolder {
 	element:HTMLElement,
 	action:(tabObjects:object[], tabIds:number[])=>void,
-	actionRequiresBookmarks:boolean,
-	actionRequiresTabObjects:boolean,
-	actionRequiresTabIds:boolean
+	action_requires_bookmarks:boolean,
+	action_requires_tab_objects:boolean,
+	action_requires_tab_ids:boolean
 };
 const actions:ActionHolder[] = [
 	{
 		element: document.getElementById("action_bookmark"),
-		action: bookmarkTabs,
-		actionRequiresBookmarks: true,
-		actionRequiresTabObjects: true,
-		actionRequiresTabIds: false
+		action: bookmark_tabs,
+		action_requires_bookmarks: true,
+		action_requires_tab_objects: true,
+		action_requires_tab_ids: false
 	},
 	{
 		element: document.getElementById("action_bookmark_and_close"),
-		action: bookmarkAndCloseTabs,
-		actionRequiresBookmarks: true,
-		actionRequiresTabObjects: true,
-		actionRequiresTabIds: true
+		action: bookmark_and_close_tabs,
+		action_requires_bookmarks: true,
+		action_requires_tab_objects: true,
+		action_requires_tab_ids: true
 	},
 	{
 		element: document.getElementById("action_discard"),
-		action: discardTabs,
-		actionRequiresBookmarks: false,
-		actionRequiresTabObjects: true,
-		actionRequiresTabIds: false
+		action: discard_tabs,
+		action_requires_bookmarks: false,
+		action_requires_tab_objects: true,
+		action_requires_tab_ids: false
 	},
 	{
 		element: document.getElementById("action_split_window"),
-		action: splitWindow,
-		actionRequiresBookmarks: false,
-		actionRequiresTabObjects: true,
-		actionRequiresTabIds: true
+		action: split_window,
+		action_requires_bookmarks: false,
+		action_requires_tab_objects: true,
+		action_requires_tab_ids: true
 	}
 ];
 
-for(let i = 0; i != actions.length; i++)
-	actions[i].element.addEventListener("click", () => { pickAction(i, true); }, false);
+for(let i = 0; i != actions.length; i++) {
+	actions[i].element.addEventListener("click", () => { change_action(i); }, false);
+}
 
 let currentAction:number = 0;
 
-const bookmarksFolderInput:HTMLInputElement = <HTMLInputElement> document.getElementById("bookmarks_folder");
-let bookmarksContainerId:string = null;
+const input_container:HTMLElement = document.getElementById("input_container");
+const bookmarks_folder_input:HTMLInputElement = <HTMLInputElement> document.getElementById("bookmarks_folder");
+const bookmarks_overlay:HTMLElement = document.getElementById("bookmarks_overlay");
+const bookmarks_open_button:HTMLElement = document.getElementById("bookmarks_open_button");
+const bookmarks_indicator:HTMLElement = document.getElementById("bookmarks_indicator");
+const bookmarks_set:HTMLElement = document.getElementById("bookmarks_set");
+const bookmarks_cancel:HTMLElement = document.getElementById("bookmarks_cancel");
+let bookmarks_container_id:string = null;
 
-const bookmarksSet:HTMLElement = document.getElementById("bookmarks_set");
-const bookmarksReset:HTMLElement = document.getElementById("bookmarks_reset");
+bookmarks_set.addEventListener("click", set_bookmark_container, false);
+bookmarks_open_button.addEventListener("click", open_bookmarks_menu, false);
+bookmarks_cancel.addEventListener("click", close_bookmarks_menu, false);
 
-bookmarksSet.addEventListener("click", setBookmarkContainer, false);
-bookmarksReset.addEventListener("click", resetBookmarkContainer, false);
-
-function cantExec() {
-	return actions[currentAction].actionRequiresBookmarks && (bookmarksContainerId === null || disabledBookmarkActions);
+function cant_exec() {
+	return actions[currentAction].action_requires_bookmarks && (bookmarks_container_id === null || disabled_bookmark_actions);
 }
 
-function execOnLR(left:boolean, right:boolean):void {
-	if(cantExec())
+function exec_on_LR(left:boolean, right:boolean):void {
+	if(cant_exec())
 		return;
 
 	chrome.tabs.query({ currentWindow: true,  highlighted: true }, (tabs) => {
@@ -73,14 +78,14 @@ function execOnLR(left:boolean, right:boolean):void {
 		chrome.tabs.query({ currentWindow: true }, (tabs) => {
 			let filteredTabs:object[] = [];
 			let filteredTabIds:number[] = [];
-			if(actions[currentAction].actionRequiresTabObjects && actions[currentAction].actionRequiresTabIds) {
+			if(actions[currentAction].action_requires_tab_objects && actions[currentAction].action_requires_tab_ids) {
 				for(let tab of tabs) {
 					if(((left && tab.index < slIdx) || (right && tab.index > srIdx))) {
 						filteredTabs.push(tab);
 						filteredTabIds.push(tab.id);
 					}
 				}
-			} else if(actions[currentAction].actionRequiresTabObjects) {
+			} else if(actions[currentAction].action_requires_tab_objects) {
 				for(let tab of tabs)
 					if(((left && tab.index < slIdx) || (right && tab.index > srIdx)))
 						filteredTabs.push(tab);
@@ -94,8 +99,8 @@ function execOnLR(left:boolean, right:boolean):void {
 	});
 }
 
-function execOnSelected():void {
-	if(cantExec())
+function exec_on_selected():void {
+	if(cant_exec())
 		return;
 	
 	chrome.tabs.query({ currentWindow: true, highlighted: true }, (tabs) => {
@@ -103,148 +108,154 @@ function execOnSelected():void {
 			return;
 			
 		let tabIds:number[] = [];
-		if(actions[currentAction].actionRequiresTabIds) {
+		if(actions[currentAction].action_requires_tab_ids) {
 			for(let tab of tabs)
 				tabIds.push(tab.id);
 		}
 
-		if(!actions[currentAction].actionRequiresTabObjects)
+		if(!actions[currentAction].action_requires_tab_objects)
 			tabs.length = 0;
 			
 		actions[currentAction].action(tabs, tabIds);
 	});
 }
 
-applyToLeft.addEventListener("click", () => execOnLR(true, false), false);
-applyToRight.addEventListener("click", () => execOnLR(false, true), false);
-applyToLeftAndRight.addEventListener("click", () => execOnLR(true, true), false);
-applyToSelected.addEventListener("click", () => execOnSelected(), false);
+apply_to_left.addEventListener("click", () => exec_on_LR(true, false), false);
+apply_to_right.addEventListener("click", () => exec_on_LR(false, true), false);
+apply_to_left_and_right.addEventListener("click", () => exec_on_LR(true, true), false);
+apply_to_selected.addEventListener("click", () => exec_on_selected(), false);
 
-function setApplyToButtonsEnabled(enabled:boolean) {
-	setElementEnabled(applyToLeft, enabled);
-	setElementEnabled(applyToRight, enabled);
-	setElementEnabled(applyToLeftAndRight, enabled);
-	setElementEnabled(applyToSelected, enabled);
+function set_apply_to_buttons_enabled(enabled:boolean) {
+	set_element_enabled(apply_to_left, enabled);
+	set_element_enabled(apply_to_right, enabled);
+	set_element_enabled(apply_to_left_and_right, enabled);
+	set_element_enabled(apply_to_selected, enabled);
 }
 
-setApplyToButtonsEnabled(false);
+set_apply_to_buttons_enabled(false);
 
-function splitWindow(tabObjects:any[], tabIds:number[]) {
-	chrome.runtime.sendMessage({
-		action: "split_window",
-		incognito: tabObjects[0].incognito,
-		tabIds: tabIds
-	}, ()=>{});
-}
-
-function discardTabs(tabObjects:any[], tabIds:number[]) {
-	for(let tab of tabObjects)
-		if(!tab.discarded)
-			chrome.tabs.discard(tab.id);
-}
-
-function bookmarkTabs(tabObjects:any[], tabIds:number[]) {
-	for(let tab of tabObjects)
-		chrome.bookmarks.create({ parentId: bookmarksContainerId, title: tab.title, url: tab.url });
-}
-
-function bookmarkAndCloseTabs(tabObjects:any[], tabIds:number[]) {
-	bookmarkTabs(tabObjects, tabIds);
-	chrome.tabs.remove(tabIds);
-}
-
-function pickAction(i:number, saveAction:boolean) {
+function change_action(i:number) {
 	if(currentAction !== i) {
 		actions[currentAction].element.classList.remove("selected");
-		actions[i].element.classList.add("selected");
-		currentAction = i;
-		setApplyToButtonsEnabled(!actions[currentAction].actionRequiresBookmarks || (bookmarksContainerId !== null && !disabledBookmarkActions));
-		if(saveAction)
-			localStorage.setItem("last_action", currentAction.toString());
+		init_action(i, true);
 	}
 }
 
-function resetBookmarkContainer() {
-	setBookmarkContainerInputEnabled(false);
-	bookmarksContainerId = null;
-	bookmarksFolderInput.value = "";
-	localStorage.removeItem("bm_container");
-	setBookmarkContainerInputEnabled(true);
+function init_action(i:number, save:boolean) {
+	actions[i].element.classList.add("selected");
+	currentAction = i;
+	set_apply_to_buttons_enabled(!actions[currentAction].action_requires_bookmarks || (bookmarks_container_id !== null && !disabled_bookmark_actions));
+	if (save) {
+		localStorage.setItem("last_action", currentAction.toString());
+	}
 }
 
-function setBookmarkContainer() {
-	setBookmarkContainerInputEnabled(false);
-	chrome.bookmarks.search(bookmarksFolderInput.value, (results:any[]) => {
-		if(results.length === 1) {
-			if(results[0].url === undefined) { // Is a folder
-				bookmarksContainerId = results[0].id;
-				bookmarksFolderInput.value = results[0].title;
-				localStorage.setItem("bm_container", bookmarksContainerId.toString());
-				setBookmarkContainerInputEnabled(true);
+function open_bookmarks_menu() {
+	set_visibility(bookmarks_overlay, true);
+}
+
+function close_bookmarks_menu() {
+	set_visibility(bookmarks_overlay, false);
+
+	if (bookmarks_container_id === null) {
+		bookmarks_folder_input.value = "";
+	} else {
+		bookmarks_folder_input.value = bookmarks_indicator.innerText;
+	}
+
+	input_container.classList.remove("error");
+}
+
+function set_bookmark_container() {
+	set_bookmark_container_input_enabled(false);
+	let value = bookmarks_folder_input.value;
+	if (value.length === 0) {
+		bookmarks_container_id = null;
+		bookmarks_folder_input.value = "";
+		bookmarks_indicator.innerText = "Not set";
+		localStorage.removeItem("bm_container");
+		close_bookmarks_menu();
+		set_bookmark_container_input_enabled(true);
+	} else {
+		chrome.bookmarks.search(value, (results:any[]) => {
+			if(results.length === 1) {
+				if(results[0].url === undefined) { // Is a folder
+					bookmarks_container_id = results[0].id;
+					bookmarks_folder_input.value = results[0].title;
+					bookmarks_indicator.innerText = results[0].title;
+					localStorage.setItem("bm_container", bookmarks_container_id.toString());
+					close_bookmarks_menu();
+					set_bookmark_container_input_enabled(true);
+				} else {
+					showError("Error: Can't find a folder with a matching title");
+					set_bookmark_container_input_enabled(true);
+				}
 			} else {
-				showError("Error: Can't find a folder with a matching title");
-				setBookmarkContainerInputEnabled(true);
+				showError(
+					results.length === 0 ?
+					"Error: Can't find a folder with a matching title" :
+					"Error: Multiple bookmark entries match this title"
+				);
+				set_bookmark_container_input_enabled(true);
 			}
-		} else {
-			showError(
-				results.length === 0 ?
-				"Error: Can't find a folder with a matching title" :
-				"Error: Multiple bookmark entries match this title"
-			);
-			setBookmarkContainerInputEnabled(true);
-		}
-	});
+		});
+	}
 }
 
-let disabledBookmarkActions = false;
-function setBookmarkContainerInputEnabled(enabled:boolean) {
-	disabledBookmarkActions = !enabled;
-	bookmarksFolderInput.disabled = !enabled;
+let disabled_bookmark_actions = false;
+function set_bookmark_container_input_enabled(enabled:boolean) {
+	disabled_bookmark_actions = !enabled;
+	bookmarks_folder_input.disabled = !enabled;
 
-	setElementEnabled(bookmarksSet, enabled);
+	set_element_enabled(bookmarks_set, enabled);
 
-	setVisibility(bookmarksReset, bookmarksContainerId !== null);
-	
-	setElementEnabled(bookmarksReset, enabled ? bookmarksContainerId !== null : false);
-
-	setApplyToButtonsEnabled(!actions[currentAction].actionRequiresBookmarks || (enabled && bookmarksContainerId !== null));
+	set_apply_to_buttons_enabled((enabled && bookmarks_container_id !== null) || !actions[currentAction].action_requires_bookmarks);
 }
 
-function discardAllTabs():void {
+function discard_all_tabs():void {
 	chrome.tabs.query({ active: false }, (tabs) => {
-		discardTabs(tabs, []);
+		discard_tabs(tabs, []);
 	});
 }
-document.getElementById('discard_all_tabs').addEventListener('click', discardAllTabs, false);
+document.getElementById('discard_all_tabs').addEventListener('click', discard_all_tabs, false);
 
-setBookmarkContainerInputEnabled(false);
+const errorMessage:HTMLElement = document.getElementById('error_message');
+
+function showError(message:string) {
+	errorMessage.innerText = message;
+	input_container.classList.add("error");
+}
 
 {
-	let bmContainer = localStorage.getItem("bm_container");
-	if(bmContainer !== null) {
+	set_bookmark_container_input_enabled(false);
+
+	let bm_container = localStorage.getItem("bm_container");
+	if(bm_container !== null) {
 		try {
-			chrome.bookmarks.get(bmContainer, (subTree:any[]) => {
-				if(subTree !== undefined && subTree.length === 1 && subTree[0].url === undefined) {
-					bookmarksContainerId = subTree[0].id;
-					bookmarksFolderInput.value = subTree[0].title;
+			chrome.bookmarks.get(bm_container, (sub_tree:any[]) => {
+				if(sub_tree !== undefined && sub_tree.length === 1 && sub_tree[0].url === undefined) {
+					bookmarks_container_id = sub_tree[0].id;
+					bookmarks_folder_input.value = sub_tree[0].title;
+					bookmarks_indicator.innerText = sub_tree[0].title;
 				}
-				setBookmarkContainerInputEnabled(true);
+				set_bookmark_container_input_enabled(true);
 			});
 		} catch {
-			setBookmarkContainerInputEnabled(true);
+			set_bookmark_container_input_enabled(true);
 		}
 	} else {
-		setBookmarkContainerInputEnabled(true);
+		set_bookmark_container_input_enabled(true);
 	}
 
-	let lastAction:any = localStorage.getItem("last_action");
-	if(lastAction === null) {
-		pickAction(1, true);
+	let last_action:any = localStorage.getItem("last_action");
+	if(last_action === null) {
+		init_action(1, true);
 	} else {
-		lastAction = parseInt(lastAction);
-		if(isNaN(lastAction) || lastAction < 0 || lastAction >= actions.length)
-			pickAction(1, true);
-		else
-			pickAction(lastAction, false);
+		last_action = parseInt(last_action);
+		if(isNaN(last_action) || last_action < 0 || last_action >= actions.length) {
+			init_action(1, true);
+		} else {
+			init_action(last_action, false);
+		}
 	}
 }

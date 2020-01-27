@@ -18,7 +18,7 @@
 	"files": [
 		"../chromeApi.ts",
 		"./assist.ts",
-		"./errorMessage.ts",
+		"./actions.ts",
 		"./popup.ts"
 	]
 }
