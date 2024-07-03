@@ -1,259 +1,286 @@
-const apply_to_left = document.getElementById("left");
-const apply_to_right = document.getElementById("right");
-const apply_to_left_and_right = document.getElementById("left_and_right");
-const apply_to_selected = document.getElementById("selected");
+import type { SplitRequest } from "./background"
 
-interface ActionHolder {
-	element:HTMLElement,
-	action:(tabObjects:object[], tabIds:number[])=>void,
-	action_requires_bookmarks:boolean,
-	action_requires_tab_objects:boolean,
-	action_requires_tab_ids:boolean
-};
-const actions:ActionHolder[] = [
-	{
-		element: document.getElementById("action_bookmark"),
-		action: bookmark_tabs,
-		action_requires_bookmarks: true,
-		action_requires_tab_objects: true,
-		action_requires_tab_ids: false
-	},
-	{
-		element: document.getElementById("action_bookmark_and_close"),
-		action: bookmark_and_close_tabs,
-		action_requires_bookmarks: true,
-		action_requires_tab_objects: true,
-		action_requires_tab_ids: true
-	},
-	{
-		element: document.getElementById("action_discard"),
-		action: discard_tabs,
-		action_requires_bookmarks: false,
-		action_requires_tab_objects: true,
-		action_requires_tab_ids: false
-	},
-	{
-		element: document.getElementById("action_split_window"),
-		action: split_window,
-		action_requires_bookmarks: false,
-		action_requires_tab_objects: true,
-		action_requires_tab_ids: true
-	}
-];
+const apply_to_left = document.getElementById("left")!
+const apply_to_right = document.getElementById("right")!
+const apply_to_left_and_right = document.getElementById("left_and_right")!
+const apply_to_selected = document.getElementById("selected")!
 
-for(let i = 0; i != actions.length; i++) {
-	actions[i].element.addEventListener("click", () => { change_action(i); }, false);
+function split_window(tab_objects: chrome.tabs.Tab[], tab_ids: number[]): void {
+  void chrome.runtime.sendMessage(<SplitRequest> {
+    incognito: tab_objects[0].incognito,
+    tab_ids,
+  })
+}
+function discard_tabs(tab_objects: chrome.tabs.Tab[]): void {
+  for (const tab of tab_objects) {
+    if (!tab.discarded) {
+      void chrome.tabs.discard(tab.id)
+    }
+  }
+}
+function bookmark_tabs(tab_objects: chrome.tabs.Tab[]): void {
+  for (const tab of tab_objects) {
+    void chrome.bookmarks.create({ parentId: bookmarks_container_id, title: tab.title, url: tab.url })
+  }
+}
+function bookmark_and_close_tabs(tab_objects: chrome.tabs.Tab[], tab_ids: number[]): void {
+  bookmark_tabs(tab_objects)
+  void chrome.tabs.remove(tab_ids)
 }
 
-let currentAction:number = 0;
+type ActionHolder = {
+  element: HTMLElement
+  action: (tabObjects: chrome.tabs.Tab[], tabIds: number[]) => void
+  requires_bookmarks: boolean
+  requires_tab_objects: boolean
+  requires_tab_ids: boolean
+}
+const actions: ActionHolder[] = [
+  {
+    element: document.getElementById("action_bookmark")!,
+    action: bookmark_tabs,
+    requires_bookmarks: true,
+    requires_tab_objects: true,
+    requires_tab_ids: false,
+  },
+  {
+    element: document.getElementById("action_bookmark_and_close")!,
+    action: bookmark_and_close_tabs,
+    requires_bookmarks: true,
+    requires_tab_objects: true,
+    requires_tab_ids: true,
+  },
+  {
+    element: document.getElementById("action_discard")!,
+    action: discard_tabs,
+    requires_bookmarks: false,
+    requires_tab_objects: true,
+    requires_tab_ids: false,
+  },
+  {
+    element: document.getElementById("action_split_window")!,
+    action: split_window,
+    requires_bookmarks: false,
+    requires_tab_objects: true,
+    requires_tab_ids: true,
+  },
+]
 
-const input_container:HTMLElement = document.getElementById("input_container");
-const bookmarks_folder_input:HTMLInputElement = <HTMLInputElement> document.getElementById("bookmarks_folder");
-const bookmarks_overlay:HTMLElement = document.getElementById("bookmarks_overlay");
-const bookmarks_open_button:HTMLElement = document.getElementById("bookmarks_open_button");
-const bookmarks_indicator:HTMLElement = document.getElementById("bookmarks_indicator");
-const bookmarks_set:HTMLElement = document.getElementById("bookmarks_set");
-const bookmarks_cancel:HTMLElement = document.getElementById("bookmarks_cancel");
-let bookmarks_container_id:string = null;
-
-bookmarks_set.addEventListener("click", set_bookmark_container, false);
-bookmarks_open_button.addEventListener("click", open_bookmarks_menu, false);
-bookmarks_cancel.addEventListener("click", close_bookmarks_menu, false);
-
-function cant_exec() {
-	return actions[currentAction].action_requires_bookmarks && (bookmarks_container_id === null || disabled_bookmark_actions);
+for (let i = 0; i !== actions.length; i++) {
+  actions[i].element.addEventListener("click", () => { change_action(i) }, false)
 }
 
-function exec_on_LR(left:boolean, right:boolean):void {
-	if(cant_exec())
-		return;
+let current_action = 0
 
-	chrome.tabs.query({ currentWindow: true,  highlighted: true }, (tabs) => {
-		if(tabs.length === 0)
-			return;
+const input_container = document.getElementById("input_container")!
+const bookmarks_folder_input = <HTMLInputElement> document.getElementById("bookmarks_folder")!
+const bookmarks_overlay = document.getElementById("bookmarks_overlay")!
+const bookmarks_open_button = document.getElementById("bookmarks_open_button")!
+const bookmarks_indicator = document.getElementById("bookmarks_indicator")!
+const bookmarks_set = document.getElementById("bookmarks_set")!
+const bookmarks_cancel = document.getElementById("bookmarks_cancel")!
 
-		let slIdx = tabs[0].index;
-		let srIdx = tabs[tabs.length-1].index;
+let bookmarks_container_id: string | undefined
 
-		chrome.tabs.query({ currentWindow: true }, (tabs) => {
-			let filteredTabs:object[] = [];
-			let filteredTabIds:number[] = [];
-			if(actions[currentAction].action_requires_tab_objects && actions[currentAction].action_requires_tab_ids) {
-				for(let tab of tabs) {
-					if(((left && tab.index < slIdx) || (right && tab.index > srIdx))) {
-						filteredTabs.push(tab);
-						filteredTabIds.push(tab.id);
-					}
-				}
-			} else if(actions[currentAction].action_requires_tab_objects) {
-				for(let tab of tabs)
-					if(((left && tab.index < slIdx) || (right && tab.index > srIdx)))
-						filteredTabs.push(tab);
-			} else {
-				for(let tab of tabs)
-					if(((left && tab.index < slIdx) || (right && tab.index > srIdx)))
-						filteredTabIds.push(tab.id);
-			}
-			actions[currentAction].action(filteredTabs, filteredTabIds);
-		});
-	});
+bookmarks_set.addEventListener("click", set_bookmark_container, false)
+bookmarks_open_button.addEventListener("click", open_bookmarks_menu, false)
+bookmarks_cancel.addEventListener("click", close_bookmarks_menu, false)
+
+function cant_exec(): boolean {
+  return actions[current_action].requires_bookmarks && (bookmarks_container_id === undefined || disabled_bookmark_actions)
 }
 
-function exec_on_selected():void {
-	if(cant_exec())
-		return;
+function exec_on_lr(left: boolean, right: boolean): void {
+  if (cant_exec()) { return }
 
-	chrome.tabs.query({ currentWindow: true, highlighted: true }, (tabs) => {
-		if(tabs.length === 0)
-			return;
+  chrome.tabs.query({ currentWindow: true, highlighted: true }, (tabs) => {
+    if (tabs.length === 0) { return }
 
-		let tabIds:number[] = [];
-		if(actions[currentAction].action_requires_tab_ids) {
-			for(let tab of tabs)
-				tabIds.push(tab.id);
-		}
+    const sl_idx = tabs[0].index
+    const sr_idx = tabs[tabs.length - 1].index
 
-		if(!actions[currentAction].action_requires_tab_objects)
-			tabs.length = 0;
-
-		actions[currentAction].action(tabs, tabIds);
-	});
+    chrome.tabs.query({ currentWindow: true }, (tabs) => {
+      const filtered_tabs: chrome.tabs.Tab[] = []
+      const filtered_tab_ids: number[] = []
+      for (const tab of tabs) {
+        if (tab.id !== undefined && tab.id >= 0 && ((left && tab.index < sl_idx) || (right && tab.index > sr_idx))) {
+          if (actions[current_action].requires_tab_objects) {
+            filtered_tabs.push(tab)
+          }
+          if (actions[current_action].requires_tab_ids) {
+            filtered_tab_ids.push(tab.id)
+          }
+        }
+      }
+      actions[current_action].action(filtered_tabs, filtered_tab_ids)
+    })
+  })
 }
 
-apply_to_left.addEventListener("click", () => exec_on_LR(true, false), false);
-apply_to_right.addEventListener("click", () => exec_on_LR(false, true), false);
-apply_to_left_and_right.addEventListener("click", () => exec_on_LR(true, true), false);
-apply_to_selected.addEventListener("click", () => exec_on_selected(), false);
+function exec_on_selected(): void {
+  if (cant_exec()) { return }
 
-function set_apply_to_buttons_enabled(enabled:boolean) {
-	set_element_enabled(apply_to_left, enabled);
-	set_element_enabled(apply_to_right, enabled);
-	set_element_enabled(apply_to_left_and_right, enabled);
-	set_element_enabled(apply_to_selected, enabled);
+  chrome.tabs.query({ currentWindow: true, highlighted: true }, (tabs) => {
+    if (tabs.length === 0) { return }
+
+    const tab_ids: number[] = []
+    if (actions[current_action].requires_tab_ids) {
+      for (const tab of tabs) {
+        if (tab.id !== undefined) {
+          tab_ids.push(tab.id)
+        }
+      }
+    }
+
+    if (!actions[current_action].requires_tab_objects) { tabs.length = 0 }
+
+    actions[current_action].action(tabs, tab_ids)
+  })
 }
 
-set_apply_to_buttons_enabled(false);
+apply_to_left.addEventListener("click", () => exec_on_lr(true, false), false)
+apply_to_right.addEventListener("click", () => exec_on_lr(false, true), false)
+apply_to_left_and_right.addEventListener("click", () => exec_on_lr(true, true), false)
+apply_to_selected.addEventListener("click", () => exec_on_selected(), false)
 
-function change_action(i:number) {
-	if(currentAction !== i) {
-		actions[currentAction].element.classList.remove("selected");
-		init_action(i, true);
-	}
+function set_apply_to_buttons_enabled(enabled: boolean): void {
+  set_element_enabled(apply_to_left, enabled)
+  set_element_enabled(apply_to_right, enabled)
+  set_element_enabled(apply_to_left_and_right, enabled)
+  set_element_enabled(apply_to_selected, enabled)
 }
 
-function init_action(i:number, save:boolean) {
-	actions[i].element.classList.add("selected");
-	currentAction = i;
-	set_apply_to_buttons_enabled(!actions[currentAction].action_requires_bookmarks || (bookmarks_container_id !== null && !disabled_bookmark_actions));
-	if (save) {
-		localStorage.setItem("last_action", currentAction.toString());
-	}
+set_apply_to_buttons_enabled(false)
+
+function change_action(i: number): void {
+  if (current_action !== i) {
+    actions[current_action].element.classList.remove("selected")
+    init_action(i, true)
+  }
 }
 
-function open_bookmarks_menu() {
-	set_visibility(bookmarks_overlay, true);
+function init_action(i: number, save: boolean): void {
+  actions[i].element.classList.add("selected")
+  current_action = i
+  set_apply_to_buttons_enabled(!actions[current_action].requires_bookmarks || (bookmarks_container_id !== null && !disabled_bookmark_actions))
+  if (save) {
+    localStorage.setItem("last_action", current_action.toString())
+  }
 }
 
-function close_bookmarks_menu() {
-	set_visibility(bookmarks_overlay, false);
-
-	if (bookmarks_container_id === null) {
-		bookmarks_folder_input.value = "";
-	} else {
-		bookmarks_folder_input.value = bookmarks_indicator.innerText;
-	}
-
-	input_container.classList.remove("error");
+function open_bookmarks_menu(): void {
+  set_visibility(bookmarks_overlay, true)
 }
 
-function set_bookmark_container() {
-	set_bookmark_container_input_enabled(false);
-	let value = bookmarks_folder_input.value;
-	if (value.length === 0) {
-		bookmarks_container_id = null;
-		bookmarks_folder_input.value = "";
-		bookmarks_indicator.innerText = "Not set";
-		localStorage.removeItem("bm_container");
-		close_bookmarks_menu();
-		set_bookmark_container_input_enabled(true);
-	} else {
-		chrome.bookmarks.search(value, (results:any[]) => {
-			if(results.length === 1) {
-				if(results[0].url === undefined) { // Is a folder
-					bookmarks_container_id = results[0].id;
-					bookmarks_folder_input.value = results[0].title;
-					bookmarks_indicator.innerText = results[0].title;
-					localStorage.setItem("bm_container", bookmarks_container_id.toString());
-					close_bookmarks_menu();
-				} else {
-					showError("Error: Can't find a folder with a matching title");
-				}
-			} else {
-				showError(
-					results.length === 0 ?
-					"Error: Can't find a folder with a matching title" :
-					"Error: Multiple bookmark entries match this title"
-				);
-			}
-			set_bookmark_container_input_enabled(true);
-		});
-	}
+function close_bookmarks_menu(): void {
+  set_visibility(bookmarks_overlay, false)
+
+  if (bookmarks_container_id === undefined) {
+    bookmarks_folder_input.value = ""
+  } else {
+    bookmarks_folder_input.value = bookmarks_indicator.innerText
+  }
+
+  input_container.classList.remove("error")
 }
 
-let disabled_bookmark_actions = false;
-function set_bookmark_container_input_enabled(enabled:boolean) {
-	disabled_bookmark_actions = !enabled;
-	bookmarks_folder_input.disabled = !enabled;
-
-	set_element_enabled(bookmarks_set, enabled);
-
-	set_apply_to_buttons_enabled((enabled && bookmarks_container_id !== null) || !actions[currentAction].action_requires_bookmarks);
+function set_bookmark_container(): void {
+  set_bookmark_container_input_enabled(false)
+  const value = bookmarks_folder_input.value
+  if (value.length === 0) {
+    bookmarks_container_id = undefined
+    bookmarks_folder_input.value = ""
+    bookmarks_indicator.innerText = "Not set"
+    localStorage.removeItem("bm_container")
+    close_bookmarks_menu()
+    set_bookmark_container_input_enabled(true)
+  } else {
+    chrome.bookmarks.search(value, (results) => {
+      if (results.length === 1) {
+        if (results[0].url === undefined) { // Is a folder
+          bookmarks_container_id = results[0].id
+          bookmarks_folder_input.value = results[0].title
+          bookmarks_indicator.innerText = results[0].title
+          localStorage.setItem("bm_container", bookmarks_container_id)
+          close_bookmarks_menu()
+        } else {
+          show_error("Error: Can't find a folder with a matching title")
+        }
+      } else {
+        show_error(
+          results.length === 0 ?
+            "Error: Can't find a folder with a matching title" :
+            "Error: Multiple bookmark entries match this title",
+        )
+      }
+      set_bookmark_container_input_enabled(true)
+    })
+  }
 }
 
-function discard_all_tabs():void {
-	chrome.tabs.query({ active: false }, (tabs) => {
-		discard_tabs(tabs, []);
-	});
+let disabled_bookmark_actions = false
+function set_bookmark_container_input_enabled(enabled: boolean): void {
+  disabled_bookmark_actions = !enabled
+  bookmarks_folder_input.disabled = !enabled
+
+  set_element_enabled(bookmarks_set, enabled)
+
+  set_apply_to_buttons_enabled((enabled && bookmarks_container_id !== null) || !actions[current_action].requires_bookmarks)
 }
-document.getElementById('discard_all_tabs').addEventListener('click', discard_all_tabs, false);
 
-const errorMessage:HTMLElement = document.getElementById('error_message');
+document.getElementById("discard_all_tabs")!.addEventListener("click", () => {
+  chrome.tabs.query({ active: false }, discard_tabs)
+}, false)
 
-function showError(message:string) {
-	errorMessage.innerText = message;
-	input_container.classList.add("error");
+const error_message = document.getElementById("error_message")!
+
+function show_error(message: string): void {
+  error_message.innerText = message
+  input_container.classList.add("error")
 }
 
 {
-	set_bookmark_container_input_enabled(false);
+  set_bookmark_container_input_enabled(false)
 
-	let bm_container = localStorage.getItem("bm_container");
-	if(bm_container !== null) {
-		try {
-			chrome.bookmarks.get(bm_container, (sub_tree:any[]) => {
-				if(sub_tree !== undefined && sub_tree.length === 1 && sub_tree[0].url === undefined) {
-					bookmarks_container_id = sub_tree[0].id;
-					bookmarks_folder_input.value = sub_tree[0].title;
-					bookmarks_indicator.innerText = sub_tree[0].title;
-				}
-				set_bookmark_container_input_enabled(true);
-			});
-		} catch {
-			set_bookmark_container_input_enabled(true);
-		}
-	} else {
-		set_bookmark_container_input_enabled(true);
-	}
+  const bm_container = localStorage.getItem("bm_container")
+  if (bm_container !== null) {
+    try {
+      chrome.bookmarks.get(bm_container, (sub_tree) => {
+        if (sub_tree !== undefined && sub_tree.length === 1 && sub_tree[0].url === undefined) {
+          bookmarks_container_id = sub_tree[0].id
+          bookmarks_folder_input.value = sub_tree[0].title
+          bookmarks_indicator.innerText = sub_tree[0].title
+        }
+        set_bookmark_container_input_enabled(true)
+      })
+    } catch {
+      set_bookmark_container_input_enabled(true)
+    }
+  } else {
+    set_bookmark_container_input_enabled(true)
+  }
 
-	let last_action:any = localStorage.getItem("last_action");
-	if(last_action === null) {
-		init_action(1, true);
-	} else {
-		last_action = parseInt(last_action);
-		if(isNaN(last_action) || last_action < 0 || last_action >= actions.length) {
-			init_action(1, true);
-		} else {
-			init_action(last_action, false);
-		}
-	}
+  // It's okay to put null in parseInt
+  const last_action = parseInt(localStorage.getItem("last_action")!)
+  if (isNaN(last_action) || last_action < 0 || last_action >= actions.length) {
+    init_action(1, true)
+  } else {
+    init_action(last_action, false)
+  }
+}
+
+function set_element_enabled(button: HTMLElement, enabled: boolean): void {
+  if (enabled) {
+    button.classList.remove("disabled")
+  } else {
+    button.classList.add("disabled")
+  }
+}
+
+function set_visibility(element: HTMLElement, visible: boolean): void {
+  if (visible) {
+    element.classList.remove("hidden")
+  } else {
+    element.classList.add("hidden")
+  }
 }
