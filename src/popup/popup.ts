@@ -71,7 +71,7 @@ function exec_on_LR(left:boolean, right:boolean):void {
 	chrome.tabs.query({ currentWindow: true,  highlighted: true }, (tabs) => {
 		if(tabs.length === 0)
 			return;
-		
+
 		let slIdx = tabs[0].index;
 		let srIdx = tabs[tabs.length-1].index;
 
@@ -102,11 +102,11 @@ function exec_on_LR(left:boolean, right:boolean):void {
 function exec_on_selected():void {
 	if(cant_exec())
 		return;
-	
+
 	chrome.tabs.query({ currentWindow: true, highlighted: true }, (tabs) => {
 		if(tabs.length === 0)
 			return;
-			
+
 		let tabIds:number[] = [];
 		if(actions[currentAction].action_requires_tab_ids) {
 			for(let tab of tabs)
@@ -115,7 +115,7 @@ function exec_on_selected():void {
 
 		if(!actions[currentAction].action_requires_tab_objects)
 			tabs.length = 0;
-			
+
 		actions[currentAction].action(tabs, tabIds);
 	});
 }
@@ -185,10 +185,8 @@ function set_bookmark_container() {
 					bookmarks_indicator.innerText = results[0].title;
 					localStorage.setItem("bm_container", bookmarks_container_id.toString());
 					close_bookmarks_menu();
-					set_bookmark_container_input_enabled(true);
 				} else {
 					showError("Error: Can't find a folder with a matching title");
-					set_bookmark_container_input_enabled(true);
 				}
 			} else {
 				showError(
@@ -196,8 +194,8 @@ function set_bookmark_container() {
 					"Error: Can't find a folder with a matching title" :
 					"Error: Multiple bookmark entries match this title"
 				);
-				set_bookmark_container_input_enabled(true);
 			}
+			set_bookmark_container_input_enabled(true);
 		});
 	}
 }

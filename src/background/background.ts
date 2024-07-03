@@ -16,14 +16,14 @@ function createContextMenu():void {
 function contextMenuClick(info:any):void {
 	if(info.menuItemId !== "save_it")
 		return;
-	
-	const target = info.srcUrl || info.linkUrl || info.pageUrl; 
-	
-	if(!target) {
-		alert("QnEZ error: Can't get the url to save");
-		return;
+
+	const target = info.srcUrl ?? info.linkUrl ?? info.pageUrl;
+
+	if(target === undefined) {
+		alert("QnEZ error: Can't get the url to save")
+		return
 	}
-	
+
 	chrome.downloads.download({
 		url: target,
 		// TODO: "prompt" is not yet implemented in FF
@@ -57,7 +57,7 @@ function onCommand(command:string):void {
 						chrome.tabs.discard(tab.id);
 				return;
 			}
-			
+
 			let container_id = localStorage.getItem("bm_container");
 			if(container_id !== null) {
 				chrome.bookmarks.get(container_id, (sub_tree:any[]) => {
@@ -83,7 +83,7 @@ function onCommand(command:string):void {
 }
 
 // Split window message receiver
-function onMessage(request:any, sender:any, sendResponse:any):void {
+function onMessage(request:any):void {
 	if(request.action === "split_window") {
 		let options:any = { incognito: request.incognito, type: "normal" };
 
@@ -110,11 +110,10 @@ if(!chrome.contextMenus.onClicked.hasListener(contextMenuClick)) {
 	// Create context menu
 	createContextMenu();
 	/*
-	if (chrome.runtime.onInstalled) {
-		chrome.runtime.onInstalled.addListener(() => {
-			createContextMenu();
-		});
-	}*/
+	chrome.runtime.onInstalled.addListener(() => {
+		createContextMenu();
+	});
+	*/
 	chrome.contextMenus.onClicked.addListener(contextMenuClick);
 	chrome.commands.onCommand.addListener(onCommand);
 	chrome.runtime.onMessage.addListener(onMessage);

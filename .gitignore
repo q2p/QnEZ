@@ -1,0 +1,11 @@
+desktop.ini
+*.js
+*.css
+*.zip
+*.map
+*.xpi
+*.crx
+_metadata
+.vscode
+.idea
+node_modules
