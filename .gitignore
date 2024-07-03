@@ -5,6 +5,7 @@ desktop.ini
 *.map
 *.xpi
 *.crx
+dist/manifest.json
 _metadata
 .vscode
 .idea
