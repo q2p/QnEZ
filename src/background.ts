@@ -184,8 +184,16 @@ function context_menu_click(info: chrome.contextMenus.OnClickData, tab?: chrome.
   })()
 }
 
+async function catch_and_undefine<T>(func: Promise<T>): Promise<T | undefined> {
+  try {
+    return await func
+  } catch (_) {
+    return undefined
+  }
+}
+
 // Receive commands
-function on_command(command: string): void {
+async function on_command(command: string, tab: chrome.tabs.Tab): Promise<void> {
   switch (command) {
     case "discard_selected_tabs":
     case "bookmark_selected_tabs":
@@ -195,43 +203,45 @@ function on_command(command: string): void {
       return
   }
 
-  chrome.tabs.query({ currentWindow: true, highlighted: true }, (tabs) => {
-    if (tabs.length === 0) { return }
+  const tabs = await chrome.tabs.query({ windowId: tab.windowId, highlighted: true })
 
-    try {
-      if (command === "discard_selected_tabs") {
-        for (const tab of tabs) {
-          if (!tab.discarded) {
-            void chrome.tabs.discard(tab.id)
-          }
+  if (tabs.length === 0) {
+    return
+  }
+
+  try {
+    if (command === "discard_selected_tabs") {
+      for (const tab of tabs) {
+        if (!tab.discarded) {
+          void chrome.tabs.discard(tab.id)
         }
-        return
       }
-
-      let container_id = localStorage.getItem("bm_container")
-      if (container_id !== null) {
-        chrome.bookmarks.get(container_id, (sub_tree) => {
-          if (sub_tree !== undefined && sub_tree.length === 1 && sub_tree[0].url === undefined) {
-            container_id = sub_tree[0].id
-
-            for (const tab of tabs) {
-              void chrome.bookmarks.create({ parentId: container_id, title: tab.title, url: tab.url })
-            }
-
-            if (command === "bookmark_and_close_selected_tabs") {
-              void chrome.tabs.remove(tabs.map((tab) => tab.id!))
-            }
-          } else {
-            notify("QnEZ error: Failed to create bookmark, target folder is invalid or absent.")
-          }
-        })
-      } else {
-        notify("QnEZ error: Failed to create bookmark, target folder is invalid or absent.")
-      }
-    } catch (_) {
-      notify("QnEZ error: Failed to complete the operation, something went wrong!")
+      return
     }
-  })
+
+    const { bm_container } = await chrome.storage.local.get("bm_container")
+    if (typeof bm_container !== "string") {
+      notify("Failed to create bookmark. Target folder is invalid or absent.")
+      return
+    }
+    const sub_tree = await catch_and_undefine(chrome.bookmarks.get(bm_container))
+    if (sub_tree === undefined || sub_tree.length !== 1 || sub_tree[0].url !== undefined || sub_tree[0].id !== bm_container) {
+      notify("Failed to create bookmark. Target folder is invalid or absent.")
+      return
+    }
+
+    await Promise.all(tabs.map((tab) => chrome.bookmarks.create({
+      parentId: bm_container,
+      title: tab.title,
+      url: tab.url,
+    })))
+
+    if (command === "bookmark_and_close_selected_tabs") {
+      await chrome.tabs.remove(tabs.map((tab) => tab.id!))
+    }
+  } catch (_) {
+    notify("Something went wrong!")
+  }
 }
 
 // Split window message receiver

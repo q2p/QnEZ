@@ -164,7 +164,7 @@ function init_action(i: number, save: boolean): void {
   current_action = i
   set_apply_to_buttons_enabled(!actions[current_action].requires_bookmarks || (bookmarks_container_id !== null && !disabled_bookmark_actions))
   if (save) {
-    localStorage.setItem("last_action", current_action.toString())
+    void chrome.storage.local.set({ last_action: current_action })
   }
 }
 
@@ -184,37 +184,34 @@ function close_bookmarks_menu(): void {
   input_container.classList.remove("error")
 }
 
-function set_bookmark_container(): void {
+async function set_bookmark_container(): Promise<void> {
   set_bookmark_container_input_enabled(false)
   const value = bookmarks_folder_input.value
   if (value.length === 0) {
     bookmarks_container_id = undefined
     bookmarks_folder_input.value = ""
     bookmarks_indicator.innerText = "Not set"
-    localStorage.removeItem("bm_container")
+    await chrome.storage.local.remove("bm_container")
     close_bookmarks_menu()
     set_bookmark_container_input_enabled(true)
   } else {
-    chrome.bookmarks.search(value, (results) => {
-      if (results.length === 1) {
-        if (results[0].url === undefined) { // Is a folder
-          bookmarks_container_id = results[0].id
-          bookmarks_folder_input.value = results[0].title
-          bookmarks_indicator.innerText = results[0].title
-          localStorage.setItem("bm_container", bookmarks_container_id)
-          close_bookmarks_menu()
-        } else {
-          show_error("Error: Can't find a folder with a matching title")
-        }
-      } else {
-        show_error(
-          results.length === 0 ?
-            "Error: Can't find a folder with a matching title" :
-            "Error: Multiple bookmark entries match this title",
-        )
-      }
-      set_bookmark_container_input_enabled(true)
-    })
+    const results = await chrome.bookmarks.search(value)
+    if (results.length !== 1) {
+      show_error(
+        results.length === 0 ?
+          "Error: Can't find a folder with a matching title" :
+          "Error: Multiple bookmark entries match this title",
+      )
+    }
+    if (results[0].url !== undefined) { // It's not a folder
+      show_error("Error: Can't find a folder with a matching title")
+    }
+    bookmarks_container_id = results[0].id
+    bookmarks_folder_input.value = results[0].title
+    bookmarks_indicator.innerText = results[0].title
+    await chrome.storage.local.set({ bm_container: bookmarks_container_id })
+    close_bookmarks_menu()
+    set_bookmark_container_input_enabled(true)
   }
 }
 
@@ -239,35 +236,30 @@ function show_error(message: string): void {
   input_container.classList.add("error")
 }
 
-{
+void (async () => {
   set_bookmark_container_input_enabled(false)
 
-  const bm_container = localStorage.getItem("bm_container")
-  if (bm_container !== null) {
+  const { bm_container } = await chrome.storage.local.get("bm_container")
+  if (typeof bm_container === "string") {
     try {
-      chrome.bookmarks.get(bm_container, (sub_tree) => {
-        if (sub_tree !== undefined && sub_tree.length === 1 && sub_tree[0].url === undefined) {
-          bookmarks_container_id = sub_tree[0].id
-          bookmarks_folder_input.value = sub_tree[0].title
-          bookmarks_indicator.innerText = sub_tree[0].title
-        }
-        set_bookmark_container_input_enabled(true)
-      })
-    } catch {
-      set_bookmark_container_input_enabled(true)
-    }
-  } else {
-    set_bookmark_container_input_enabled(true)
+      const sub_tree = await chrome.bookmarks.get(bm_container)
+      if (sub_tree !== undefined && sub_tree.length === 1 && sub_tree[0].url === undefined) {
+        bookmarks_container_id = sub_tree[0].id
+        bookmarks_folder_input.value = sub_tree[0].title
+        bookmarks_indicator.innerText = sub_tree[0].title
+      }
+    } catch { /* NOOP */ }
   }
 
-  // It's okay to put null in parseInt
-  const last_action = parseInt(localStorage.getItem("last_action")!)
-  if (isNaN(last_action) || last_action < 0 || last_action >= actions.length) {
+  const { last_action } = await chrome.storage.local.get("last_action")
+  if (typeof last_action !== "number" || last_action < 0 || last_action >= actions.length) {
     init_action(1, true)
   } else {
     init_action(last_action, false)
   }
-}
+
+  set_bookmark_container_input_enabled(true)
+})()
 
 function set_element_enabled(button: HTMLElement, enabled: boolean): void {
   if (enabled) {
