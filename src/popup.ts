@@ -1,9 +1,9 @@
 import type { SplitRequest } from "./background"
 
-const apply_to_left = document.getElementById("left")!
-const apply_to_right = document.getElementById("right")!
-const apply_to_left_and_right = document.getElementById("left_and_right")!
-const apply_to_selected = document.getElementById("selected")!
+const apply_to_left = <HTMLButtonElement> document.getElementById("left")!
+const apply_to_right = <HTMLButtonElement> document.getElementById("right")!
+const apply_to_left_and_right = <HTMLButtonElement> document.getElementById("left_and_right")!
+const apply_to_selected = <HTMLButtonElement> document.getElementById("selected")!
 
 function split_window(tab_objects: chrome.tabs.Tab[], tab_ids: number[]): void {
   void chrome.runtime.sendMessage(<SplitRequest> {
@@ -77,7 +77,7 @@ const bookmarks_folder_input = <HTMLInputElement> document.getElementById("bookm
 const bookmarks_overlay = document.getElementById("bookmarks_overlay")!
 const bookmarks_open_button = document.getElementById("bookmarks_open_button")!
 const bookmarks_indicator = document.getElementById("bookmarks_indicator")!
-const bookmarks_set = document.getElementById("bookmarks_set")!
+const bookmarks_set = <HTMLButtonElement> document.getElementById("bookmarks_set")!
 const bookmarks_cancel = document.getElementById("bookmarks_cancel")!
 
 let bookmarks_container_id: string | undefined
@@ -229,6 +229,24 @@ document.getElementById("discard_all_tabs")!.addEventListener("click", () => {
   chrome.tabs.query({ active: false }, discard_tabs)
 }, false)
 
+{
+  const wipe_btn = <HTMLButtonElement> document.getElementById("wipe_downloads")!
+  wipe_btn.addEventListener("click", async () => {
+    set_element_enabled(wipe_btn, false)
+    try {
+      while ((await chrome.downloads.erase({
+        totalBytesGreater: 0,
+        paused: false,
+        exists: true,
+        limit: 512,
+        state: "complete",
+      })).length !== 0) { /* NOOP */ }
+    } finally {
+      set_element_enabled(wipe_btn, true)
+    }
+  }, false)
+}
+
 const error_message = document.getElementById("error_message")!
 
 function show_error(message: string): void {
@@ -261,7 +279,8 @@ void (async () => {
   set_bookmark_container_input_enabled(true)
 })()
 
-function set_element_enabled(button: HTMLElement, enabled: boolean): void {
+function set_element_enabled(button: HTMLButtonElement, enabled: boolean): void {
+  button.disabled = !enabled
   if (enabled) {
     button.classList.remove("disabled")
   } else {
