@@ -230,6 +230,36 @@ document.getElementById("discard_all_tabs")!.addEventListener("click", () => {
 }, false)
 
 {
+  function swap_remove<T>(arr: T[], idx: number): T {
+    const last = arr.pop()!
+    if (idx === arr.length) {
+      return last
+    }
+    const ret = arr[idx]
+    arr[idx] = last
+    return ret
+  }
+  const shuffle_tabs = <HTMLButtonElement> document.getElementById("shuffle_tabs")!
+  shuffle_tabs.addEventListener("click", async () => {
+    set_element_enabled(shuffle_tabs, false)
+    try {
+      const tabs = await chrome.tabs.query({ currentWindow: true })
+      let i = 0
+      while (tabs.length !== 0) {
+        const r = Math.floor(Math.random() * tabs.length) % tabs.length
+        const t = swap_remove(tabs, r)
+        if (t.id === undefined || (chrome.tabGroups !== undefined && t.groupId !== chrome.tabGroups.TAB_GROUP_ID_NONE)) {
+          continue
+        }
+        await chrome.tabs.move(t.id, { index: i++ })
+      }
+    } finally {
+      set_element_enabled(shuffle_tabs, true)
+    }
+  }, false)
+}
+
+{
   const wipe_btn = <HTMLButtonElement> document.getElementById("wipe_downloads")!
   wipe_btn.addEventListener("click", async () => {
     set_element_enabled(wipe_btn, false)
