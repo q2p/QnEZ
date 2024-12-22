@@ -12,9 +12,6 @@
 *.scss          text eol=LF
 *.css           text eol=LF
 
-*.html binary
-*.xml binary
-*.csv binary
 *.png binary
 *.jpg binary
 *.jpeg binary

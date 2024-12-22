@@ -259,9 +259,109 @@ document.getElementById("discard_all_tabs")!.addEventListener("click", () => {
   }, false)
 }
 
+async function get_dupes(): Promise<[Map<string, chrome.tabs.Tab[]>, number]> {
+  const [tabs, windows] = await Promise.all([chrome.tabs.query({}), chrome.windows.getCurrent()])
+  const focused_window = windows.id ?? -2
+  const url_to_tabs = new Map<string, chrome.tabs.Tab[]>()
+  for (const tab of tabs) {
+    if (tab.url === undefined) {
+      continue
+    }
+    let arr = url_to_tabs.get(tab.url)
+    if (arr === undefined) {
+      arr = []
+      url_to_tabs.set(tab.url, arr)
+    }
+    arr.push(tab)
+  }
+  for (const k of url_to_tabs.keys()) {
+    if (url_to_tabs.get(k)!.length < 2) {
+      url_to_tabs.delete(k)
+    }
+  }
+  return [url_to_tabs, focused_window]
+}
+
+{
+  const close_dupes_btn = <HTMLButtonElement> document.getElementById("close_dupes")!
+  close_dupes_btn.addEventListener("click", async () => {
+    if (close_dupes_btn.disabled) {
+      return
+    }
+    set_element_enabled(close_dupes_btn, false)
+    try {
+      const [tabs, focused_window] = await get_dupes()
+      const sorted_tabs: chrome.tabs.Tab[] = []
+      for (const duped_tabs of tabs.values()) {
+        if (duped_tabs.some((t) => t.windowId !== focused_window)) {
+          for (const tab of duped_tabs) {
+            if (tab.windowId === focused_window) {
+              sorted_tabs.push(tab)
+            }
+          }
+        }
+      }
+      const promises: Array<Promise<void>> = []
+      for (const tab of sorted_tabs) {
+        if (tab.windowId === focused_window) {
+          promises.push(chrome.tabs.remove(tab.id!))
+        }
+      }
+      await Promise.all(promises)
+    } finally {
+      set_element_enabled(close_dupes_btn, true)
+    }
+  }, false)
+}
+
+{
+  const show_dupes_btn = <HTMLButtonElement> document.getElementById("show_dupes")!
+  show_dupes_btn.addEventListener("click", async () => {
+    if (show_dupes_btn.disabled) {
+      return
+    }
+    set_element_enabled(show_dupes_btn, false)
+    try {
+      const [tabs, focused_window] = await get_dupes()
+      const sorted_tabs: chrome.tabs.Tab[] = []
+      for (const tab of tabs.values()) {
+        sorted_tabs.push(...tab)
+      }
+      sorted_tabs.sort((a, b) => {
+        let diff = a.url!.localeCompare(b.url!)
+        if (diff !== 0) {
+          return diff
+        }
+        diff = a.windowId - b.windowId
+        if (diff !== 0) {
+          return diff
+        }
+        return (a.id ?? -2) - (b.id ?? -2)
+      })
+      let current_tab = sorted_tabs.length - 1
+      for (let i = 0; i !== sorted_tabs.length; i++) {
+        const tab = sorted_tabs[i]
+        if (tab.windowId === focused_window && tab.active) {
+          current_tab = i
+        }
+      }
+      const next = sorted_tabs[(current_tab + 1) % sorted_tabs.length]
+      await Promise.all([
+        chrome.windows.update(next.windowId, { focused: true }),
+        chrome.tabs.update(next.id!, { active: true, muted: true }),
+      ])
+    } finally {
+      set_element_enabled(show_dupes_btn, true)
+    }
+  }, false)
+}
+
 {
   const wipe_btn = <HTMLButtonElement> document.getElementById("wipe_downloads")!
   wipe_btn.addEventListener("click", async () => {
+    if (wipe_btn.disabled) {
+      return
+    }
     set_element_enabled(wipe_btn, false)
     try {
       while ((await chrome.downloads.erase({
