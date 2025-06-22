@@ -356,26 +356,29 @@ async function get_dupes(): Promise<[Map<string, chrome.tabs.Tab[]>, number]> {
   }, false)
 }
 
-{
-  const wipe_btn = <HTMLButtonElement> document.getElementById("wipe_downloads")!
-  wipe_btn.addEventListener("click", async () => {
-    if (wipe_btn.disabled) {
+function wipe_downloads(should_exist: boolean): (() => Promise<void>) {
+  return async function(this: HTMLButtonElement) {
+    if (this.disabled) {
       return
     }
-    set_element_enabled(wipe_btn, false)
+    set_element_enabled(this, false)
     try {
       while ((await chrome.downloads.erase({
         totalBytesGreater: 0,
         paused: false,
-        exists: true,
+        exists: should_exist,
         limit: 512,
         state: "complete",
       })).length !== 0) { /* NOOP */ }
     } finally {
-      set_element_enabled(wipe_btn, true)
+      set_element_enabled(this, true)
     }
-  }, false)
+  }
 }
+
+document.getElementById("wipe_downloads_completed")!.addEventListener("click", wipe_downloads(true), false)
+
+document.getElementById("wipe_downloads_deleted")!.addEventListener("click", wipe_downloads(false), false)
 
 const error_message = document.getElementById("error_message")!
 
