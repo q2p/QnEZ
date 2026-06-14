@@ -10,4 +10,5 @@ _metadata
 .vscode
 .idea
 package-lock.json
+bun.lock
 node_modules

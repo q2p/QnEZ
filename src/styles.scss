@@ -210,6 +210,14 @@ $circle_border: 1px;
 	color: $error_color;
 }
 
+#restart_failed_container {
+	padding: 8px;
+
+	input {
+		width: $window_width - 2 * 8px - 2 * 4px;
+	}
+}
+
 #input_container {
 	padding: 8px;
 

@@ -1,12 +1,13 @@
+import "./styles.scss"
 import type { SplitRequest } from "./background"
 
-const apply_to_left = <HTMLButtonElement> document.getElementById("left")!
-const apply_to_right = <HTMLButtonElement> document.getElementById("right")!
-const apply_to_left_and_right = <HTMLButtonElement> document.getElementById("left_and_right")!
-const apply_to_selected = <HTMLButtonElement> document.getElementById("selected")!
+const apply_to_left = <HTMLButtonElement>document.getElementById("left")!
+const apply_to_right = <HTMLButtonElement>document.getElementById("right")!
+const apply_to_left_and_right = <HTMLButtonElement>document.getElementById("left_and_right")!
+const apply_to_selected = <HTMLButtonElement>document.getElementById("selected")!
 
 function split_window(tab_objects: chrome.tabs.Tab[], tab_ids: number[]): void {
-  void chrome.runtime.sendMessage(<SplitRequest> {
+  void chrome.runtime.sendMessage(<SplitRequest>{
     incognito: tab_objects[0].incognito,
     tab_ids,
   })
@@ -73,11 +74,11 @@ for (let i = 0; i !== actions.length; i++) {
 let current_action = 0
 
 const input_container = document.getElementById("input_container")!
-const bookmarks_folder_input = <HTMLInputElement> document.getElementById("bookmarks_folder")!
+const bookmarks_folder_input = <HTMLInputElement>document.getElementById("bookmarks_folder")!
 const bookmarks_overlay = document.getElementById("bookmarks_overlay")!
 const bookmarks_open_button = document.getElementById("bookmarks_open_button")!
 const bookmarks_indicator = document.getElementById("bookmarks_indicator")!
-const bookmarks_set = <HTMLButtonElement> document.getElementById("bookmarks_set")!
+const bookmarks_set = <HTMLButtonElement>document.getElementById("bookmarks_set")!
 const bookmarks_cancel = document.getElementById("bookmarks_cancel")!
 
 let bookmarks_container_id: string | undefined
@@ -239,7 +240,7 @@ document.getElementById("discard_all_tabs")!.addEventListener("click", () => {
     arr[idx] = last
     return ret
   }
-  const shuffle_tabs = <HTMLButtonElement> document.getElementById("shuffle_tabs")!
+  const shuffle_tabs = <HTMLButtonElement>document.getElementById("shuffle_tabs")!
   shuffle_tabs.addEventListener("click", async () => {
     set_element_enabled(shuffle_tabs, false)
     try {
@@ -283,7 +284,7 @@ async function get_dupes(): Promise<[Map<string, chrome.tabs.Tab[]>, number]> {
 }
 
 {
-  const close_dupes_btn = <HTMLButtonElement> document.getElementById("close_dupes")!
+  const close_dupes_btn = <HTMLButtonElement>document.getElementById("close_dupes")!
   close_dupes_btn.addEventListener("click", async () => {
     if (close_dupes_btn.disabled) {
       return
@@ -315,7 +316,7 @@ async function get_dupes(): Promise<[Map<string, chrome.tabs.Tab[]>, number]> {
 }
 
 {
-  const show_dupes_btn = <HTMLButtonElement> document.getElementById("show_dupes")!
+  const show_dupes_btn = <HTMLButtonElement>document.getElementById("show_dupes")!
   show_dupes_btn.addEventListener("click", async () => {
     if (show_dupes_btn.disabled) {
       return
@@ -356,6 +357,27 @@ async function get_dupes(): Promise<[Map<string, chrome.tabs.Tab[]>, number]> {
   }, false)
 }
 
+function latest_completions(downloads: chrome.downloads.DownloadItem[]): Map<string, Date> {
+  const completions = new Map<string, Date>()
+  for (const d of downloads) {
+    if (d.state !== "complete") {
+      continue
+    }
+    console.assert(d.endTime !== undefined)
+    const end_time = new Date(d.endTime!)
+    const present = completions.get(d.url)
+    if (present === undefined || end_time > present) {
+      completions.set(d.url, end_time)
+    }
+  }
+  return completions
+}
+
+function superseded_by_completion(d: chrome.downloads.DownloadItem, completions: Map<string, Date>): boolean {
+  const completed_at = completions.get(d.url)
+  return completed_at !== undefined && new Date(d.startTime) < completed_at
+}
+
 function wipe_downloads(should_exist: boolean): (() => Promise<void>) {
   return async function(this: HTMLButtonElement) {
     if (this.disabled) {
@@ -363,6 +385,18 @@ function wipe_downloads(should_exist: boolean): (() => Promise<void>) {
     }
     set_element_enabled(this, false)
     try {
+      if (should_exist) {
+        // баг chrome-а. state в search нихера не делает.
+        const all = await chrome.downloads.search({ limit: 0 })
+        const completions = latest_completions(all)
+        const erasures: Array<Promise<number[]>> = []
+        for (const d of all) {
+          if (d.state === "interrupted" && superseded_by_completion(d, completions)) {
+            erasures.push(chrome.downloads.erase({ id: d.id }))
+          }
+        }
+        await Promise.all(erasures)
+      }
       while ((await chrome.downloads.erase({
         totalBytesGreater: 0,
         paused: false,
@@ -379,6 +413,58 @@ function wipe_downloads(should_exist: boolean): (() => Promise<void>) {
 document.getElementById("wipe_downloads_completed")!.addEventListener("click", wipe_downloads(true), false)
 
 document.getElementById("wipe_downloads_deleted")!.addEventListener("click", wipe_downloads(false), false)
+
+{
+  const restart_failed_btn = <HTMLButtonElement>document.getElementById("restart_failed")!
+  const restart_failed_input = <HTMLInputElement>document.getElementById("restart_failed_substring")!
+  restart_failed_btn.addEventListener("click", async () => {
+    if (restart_failed_btn.disabled) {
+      return
+    }
+    const substring = restart_failed_input.value
+    if (substring.length === 0) {
+      return
+    }
+    set_element_enabled(restart_failed_btn, false)
+    try {
+      // баг chrome-а. state в search нихера не делает.
+      const all = await chrome.downloads.search({ limit: 0 })
+      const completions = latest_completions(all)
+      const restarted = new Set<string>()
+      const tasks: Array<() => Promise<unknown>> = []
+      for (const d of all) {
+        const download_matches = d.url.includes(substring) ||
+          d.finalUrl.includes(substring) ||
+          d.filename.includes(substring)
+
+        if (
+          d.state !== "interrupted" ||
+          !download_matches ||
+          restarted.has(d.url) ||
+          superseded_by_completion(d, completions)
+        ) {
+          continue
+        }
+
+        restarted.add(d.url)
+        if (d.canResume) {
+          tasks.push(() => chrome.downloads.resume(d.id).catch(() => chrome.downloads.download({ url: d.url })))
+        } else {
+          tasks.push(() => chrome.downloads.download({ url: d.url }))
+        }
+      }
+
+      async function worker(): Promise<void> {
+        while (tasks.length !== 0) {
+          await tasks.pop()!()
+        }
+      }
+      await Promise.all(Array.from({ length: 8 }, worker))
+    } finally {
+      set_element_enabled(restart_failed_btn, true)
+    }
+  }, false)
+}
 
 const error_message = document.getElementById("error_message")!
 
