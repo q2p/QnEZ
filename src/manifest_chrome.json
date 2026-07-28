@@ -1,7 +1,7 @@
 {
   "name": "QnEZ",
   "description": "Quick bookmark creation and tab discarding. One click downloads n stuff. IDK.",
-  "version": "0.0.19",
+  "version": "0.0.20",
   "manifest_version": 3,
   "permissions": [ "tabs", "tabGroups", "bookmarks", "contextMenus", "downloads", "notifications", "storage", "debugger" ],
   "offline_enabled": true,
