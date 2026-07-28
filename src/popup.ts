@@ -466,6 +466,84 @@ document.getElementById("wipe_downloads_deleted")!.addEventListener("click", wip
   }, false)
 }
 
+{
+  const download_raw_html_btn = <HTMLButtonElement>document.getElementById("download_raw_html")!
+
+  if (typeof chrome.debugger === "undefined") {
+    set_visibility(download_raw_html_btn, false)
+  } else {
+    async function fetch_raw_html(tab_id: number): Promise<string> {
+      const target: chrome.debugger.Debuggee = { tabId: tab_id }
+      await chrome.debugger.attach(target, "1.3")
+
+      let listener: (source: chrome.debugger.Debuggee, method: string, params: any) => void
+      try {
+        await chrome.debugger.sendCommand(target, "Network.enable")
+
+        await chrome.debugger.sendCommand(target, "Page.enable")
+
+        const url = (<any> await chrome.debugger.sendCommand(target, "Page.getResourceTree")).frameTree.frame.url
+
+        const captured = new Promise<string>((resolve) => {
+          listener = function(source: chrome.debugger.Debuggee, method: string, params: any): void {
+            if (
+              source.tabId === tab_id &&
+              method === "Network.responseReceived" &&
+              params.type === "Document" &&
+              params.response.url === url
+            ) {
+              resolve(<string> params.requestId)
+            }
+          }
+        })
+        chrome.debugger.onEvent.addListener(listener!)
+
+        await chrome.debugger.sendCommand(target, "Page.reload")
+        const doc_request_id = await captured
+
+        if (doc_request_id === undefined) {
+          throw new Error("No document response was captured during reload")
+        }
+        const body: any = await chrome.debugger.sendCommand(target, "Network.getResponseBody", {
+          requestId: doc_request_id,
+        })
+        return (<boolean> body.base64Encoded) ? body.body : btoa(<string> body.body)
+      } finally {
+        chrome.debugger.onEvent.removeListener(listener!)
+        await chrome.debugger.detach(target)
+      }
+    }
+
+    download_raw_html_btn.addEventListener("click", async () => {
+      if (download_raw_html_btn.disabled) {
+        return
+      }
+      set_element_enabled(download_raw_html_btn, false)
+      try {
+        const [tab] = await chrome.tabs.query({ active: true, currentWindow: true })
+        if (tab?.id === undefined || tab.url === undefined ||
+          !(tab.url.startsWith("http:") || tab.url.startsWith("https:"))) {
+          return
+        }
+
+        const base64 = await fetch_raw_html(tab.id)
+
+        await chrome.downloads.download({
+          url: `data:text/html;base64,${base64}`,
+          // Chrome can't keep blob's filenames.
+          filename: "unnamed-document.html",
+          conflictAction: "prompt",
+          saveAs: false,
+        })
+      } catch (error) {
+        console.error("Failed to download raw HTML:", error)
+      } finally {
+        set_element_enabled(download_raw_html_btn, true)
+      }
+    }, false)
+  }
+}
+
 const error_message = document.getElementById("error_message")!
 
 function show_error(message: string): void {

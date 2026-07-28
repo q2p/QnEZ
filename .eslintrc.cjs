@@ -65,8 +65,8 @@ module.exports = {
       "format": ["StrictPascalCase"],
     }],
 
-    "func-style": ["error", "declaration"],
     "no-import-assign": "error",
+    "no-control-regex": "off",
 
     "sort-imports": "off",
     "import/order": ["error", {

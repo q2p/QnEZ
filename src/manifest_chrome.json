@@ -3,7 +3,7 @@
   "description": "Quick bookmark creation and tab discarding. One click downloads n stuff. IDK.",
   "version": "0.0.19",
   "manifest_version": 3,
-  "permissions": [ "tabs", "tabGroups", "bookmarks", "contextMenus", "downloads", "notifications", "storage" ],
+  "permissions": [ "tabs", "tabGroups", "bookmarks", "contextMenus", "downloads", "notifications", "storage", "debugger" ],
   "offline_enabled": true,
   "icons": {
      "16": "icon16.png",
