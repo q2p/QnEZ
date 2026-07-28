@@ -484,15 +484,24 @@ document.getElementById("wipe_downloads_deleted")!.addEventListener("click", wip
 
         const url = (<any> await chrome.debugger.sendCommand(target, "Page.getResourceTree")).frameTree.frame.url
 
-        const captured = new Promise<string>((resolve) => {
-          listener = function(source: chrome.debugger.Debuggee, method: string, params: any): void {
-            if (
-              source.tabId === tab_id &&
-              method === "Network.responseReceived" &&
+        const captured = new Promise((resolve) => {
+          let request_id: string | undefined
+
+          listener = function(source, method, params) {
+            if (source.tabId !== tab_id) return
+
+            if (method === "Network.responseReceived" &&
               params.type === "Document" &&
               params.response.url === url
             ) {
-              resolve(<string> params.requestId)
+              request_id = params.requestId
+            }
+
+            if (method === "Network.loadingFinished" &&
+              request_id !== undefined &&
+              params.requestId === request_id
+            ) {
+              resolve(request_id)
             }
           }
         })
@@ -507,7 +516,18 @@ document.getElementById("wipe_downloads_deleted")!.addEventListener("click", wip
         const body: any = await chrome.debugger.sendCommand(target, "Network.getResponseBody", {
           requestId: doc_request_id,
         })
-        return (<boolean> body.base64Encoded) ? body.body : btoa(<string> body.body)
+
+        if (<boolean> body.base64Encoded) {
+          return <string> body.body
+        }
+
+        // Some weird workaround around Latin1 strings in Chrome.
+        const body_u8 = new TextEncoder().encode(<string> body.body)
+        let bin_str = ""
+        for (let i = 0; i < body_u8.length; i++) {
+          bin_str += String.fromCharCode(body_u8[i])
+        }
+        return btoa(bin_str)
       } finally {
         chrome.debugger.onEvent.removeListener(listener!)
         await chrome.debugger.detach(target)
@@ -535,8 +555,9 @@ document.getElementById("wipe_downloads_deleted")!.addEventListener("click", wip
           conflictAction: "prompt",
           saveAs: false,
         })
-      } catch (error) {
+      } catch (error: any) {
         console.error("Failed to download raw HTML:", error)
+        alert(`Failed to download raw HTML: ${error.toString()}`)
       } finally {
         set_element_enabled(download_raw_html_btn, true)
       }
