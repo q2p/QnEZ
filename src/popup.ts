@@ -469,10 +469,38 @@ document.getElementById("wipe_downloads_deleted")!.addEventListener("click", wip
 {
   const download_raw_html_btn = <HTMLButtonElement>document.getElementById("download_raw_html")!
 
+  const wa_web = "https://web.archive.org/web/"
+  const timestamp_end = wa_web.length + "20001230246060".length
+  const digits_re = /^\d*$/
+
+  async function try_fetch_wayback(url: string): Promise<boolean> {
+    if (!url.startsWith(wa_web)) {
+      return false
+    }
+    const timestamp = url.slice(wa_web.length, timestamp_end)
+    let post_ts = url.slice(timestamp_end)
+    for (const prefix of ["mp_/", "id_/"]) {
+      if (post_ts.startsWith(prefix)) {
+        post_ts = post_ts.slice(prefix.length - 1)
+      }
+    }
+    if (!digits_re.test(timestamp) || !post_ts.startsWith("/")) {
+      return false
+    }
+
+    await chrome.downloads.download({
+      url: wa_web + timestamp + "id_" + post_ts,
+      conflictAction: "prompt",
+      saveAs: false,
+    })
+
+    return true
+  }
+
   if (typeof chrome.debugger === "undefined") {
     set_visibility(download_raw_html_btn, false)
   } else {
-    async function fetch_raw_html(tab_id: number): Promise<string> {
+    async function fetch_raw_html(tab_id: number): Promise<void> {
       const target: chrome.debugger.Debuggee = { tabId: tab_id }
       await chrome.debugger.attach(target, "1.3")
 
@@ -517,17 +545,23 @@ document.getElementById("wipe_downloads_deleted")!.addEventListener("click", wip
           requestId: doc_request_id,
         })
 
-        if (<boolean> body.base64Encoded) {
-          return <string> body.body
+        let base64: string = body.body
+        if (!<boolean> body.base64Encoded) {
+          // Some weird workaround around Latin1 strings in Chrome.
+          const body_u8 = new TextEncoder().encode(base64)
+          base64 = ""
+          for (let i = 0; i < body_u8.length; i++) {
+            base64 += String.fromCharCode(body_u8[i])
+          }
         }
 
-        // Some weird workaround around Latin1 strings in Chrome.
-        const body_u8 = new TextEncoder().encode(<string> body.body)
-        let bin_str = ""
-        for (let i = 0; i < body_u8.length; i++) {
-          bin_str += String.fromCharCode(body_u8[i])
-        }
-        return btoa(bin_str)
+        await chrome.downloads.download({
+          url: `data:text/html;base64,${btoa(base64)}`,
+          // Chrome can't keep blob's filenames.
+          filename: "unnamed-document.html",
+          conflictAction: "prompt",
+          saveAs: false,
+        })
       } finally {
         chrome.debugger.onEvent.removeListener(listener!)
         await chrome.debugger.detach(target)
@@ -546,15 +580,10 @@ document.getElementById("wipe_downloads_deleted")!.addEventListener("click", wip
           return
         }
 
-        const base64 = await fetch_raw_html(tab.id)
-
-        await chrome.downloads.download({
-          url: `data:text/html;base64,${base64}`,
-          // Chrome can't keep blob's filenames.
-          filename: "unnamed-document.html",
-          conflictAction: "prompt",
-          saveAs: false,
-        })
+        if (await try_fetch_wayback(tab.url)) {
+          return
+        }
+        await fetch_raw_html(tab.id)
       } catch (error: any) {
         console.error("Failed to download raw HTML:", error)
         alert(`Failed to download raw HTML: ${error.toString()}`)
